@@ -1,0 +1,6 @@
+{
+  "name": "FlowShorts AI - Storyboard & Prompt Studio",
+  "description": "AI Storyboard creator and Google Flow AI JSON video prompt generator for YouTube Shorts animation creators, featuring viral hooks, titles, and SEO hashtags.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
