@@ -353,22 +353,46 @@ export default function PromptJsonViewer({
           </div>
         ) : (
           /* Raw JSON Tab */
-          <div>
+          <div className="space-y-4">
             <div className="mb-2 flex items-center justify-between">
               <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-300">
-                Output Prompt JSON — Siap Copy-Paste
+                Output Prompt JSON per Adegan — Siap Copy-Paste ke Google Flow AI
               </span>
               <span className="text-[11px] text-zinc-400">
                 {prompts.length} scene • UTF-8 JSON
               </span>
             </div>
-            <pre className="max-h-125 overflow-auto rounded-xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-xs text-emerald-400 select-all dark:border-zinc-800">
-              <code>{cleanFlowAiJson}</code>
-            </pre>
+            
+            <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+              {prompts.map((scene, idx) => {
+                const sceneJson = JSON.stringify(scene, null, 2);
+                const isCopied = copiedIndex === idx;
+                
+                return (
+                  <div key={idx} className="rounded-xl border border-zinc-200 bg-zinc-950 overflow-hidden dark:border-zinc-800">
+                    <div className="flex items-center justify-between bg-zinc-900 px-4 py-2 border-b border-zinc-800">
+                      <span className="text-xs font-semibold text-zinc-300">Adegan {scene.adegan ?? idx + 1}: {scene.judul}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyPrompt(sceneJson, idx)}
+                        className="flex items-center gap-1.5 rounded-lg bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-700 hover:text-white"
+                      >
+                        {isCopied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                        <span>{isCopied ? 'Tersalin!' : 'Salin JSON Adegan'}</span>
+                      </button>
+                    </div>
+                    <pre className="p-4 font-mono text-xs text-emerald-400 overflow-x-auto">
+                      <code>{sceneJson}</code>
+                    </pre>
+                  </div>
+                );
+              })}
+            </div>
+
             <div className="mt-3 rounded-lg bg-zinc-100 p-3 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 flex items-start gap-2">
               <Info className="h-4 w-4 shrink-0 text-indigo-500 mt-0.5" />
               <span>
-                <strong>Cara Menggunakan:</strong> Salin JSON di atas atau unduh file <code>.json</code>. Masukkan tiap <code>prompt</code> ke generator gambar (Midjourney, DALL-E, dll) dan tiap <code>dialog</code>/<code>audio</code> ke editor video Anda secara berurutan.
+                <strong>Cara Menggunakan:</strong> Salin JSON per adegan di atas. Masukkan satu per satu ke Google Flow AI untuk menghasilkan video per adegan dengan lebih mudah dan terstruktur.
               </span>
             </div>
           </div>

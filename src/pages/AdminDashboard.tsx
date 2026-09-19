@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { ShieldCheck, UserCheck, Search, LogOut } from 'lucide-react';
+import { ShieldCheck, UserCheck, Search, LogOut, Trash2, ArrowLeft } from 'lucide-react';
 
 interface UserData {
   id: string;
@@ -66,6 +66,22 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleDelete = async (userId: string) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus pengguna ini?')) return;
+    
+    const { error } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', userId);
+
+    if (error) {
+      console.error('Error deleting user:', error);
+      alert('Gagal menghapus user.');
+    } else {
+      fetchUsers();
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-zinc-100 dark:bg-zinc-950">
@@ -95,13 +111,22 @@ export default function AdminDashboard() {
               <p className="text-sm text-zinc-500 dark:text-zinc-400">Kelola akses pelanggan website Anda.</p>
             </div>
           </div>
-          <button
-            onClick={signOut}
-            className="inline-flex w-fit items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-          >
-            <LogOut className="h-4 w-4" />
-            Keluar
-          </button>
+          <div className="flex gap-2">
+            <Link
+              to="/app"
+              className="inline-flex w-fit items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Kembali
+            </Link>
+            <button
+              onClick={signOut}
+              className="inline-flex w-fit items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+            >
+              <LogOut className="h-4 w-4" />
+              Keluar
+            </button>
+          </div>
         </div>
 
         {/* Content */}
@@ -159,7 +184,7 @@ export default function AdminDashboard() {
                           day: 'numeric', month: 'long', year: 'numeric'
                         })}
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-6 py-4 text-right flex justify-end gap-2">
                         {u.status === 'pending' && (
                           <button
                             onClick={() => handleApprove(u.id)}
@@ -176,6 +201,13 @@ export default function AdminDashboard() {
                             Cabut Akses
                           </button>
                         )}
+                        <button
+                          onClick={() => handleDelete(u.id)}
+                          className="rounded-lg border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100 dark:border-red-900/50 dark:bg-red-900/20 dark:hover:bg-red-900/40"
+                          title="Hapus Pengguna"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </td>
                     </tr>
                   ))
