@@ -78,14 +78,46 @@ app.post('/api/generate-story', async (req, res) => {
       return res.status(500).json({ error: 'GEMINI_API_KEY is missing.' });
     }
 
-    const { premise, genre = 'Komedi Dramatis', sceneCount = 4, referenceImages = [] } = req.body;
+    const { premise, genre = 'Komedi Dramatis', sceneCount = 4, referenceImages = [], language = 'id' } = req.body;
     if (!premise && (!referenceImages || referenceImages.length === 0)) {
       return res.status(400).json({ error: 'Premise/ide cerita atau referensi gambar wajib diisi.' });
     }
 
     const ai = getAIClient();
 
-    const systemInstruction = `Kamu adalah seorang penulis skenario viral profesional yang ahli membuat cerita pendek untuk YouTube Shorts, TikTok, dan Reels.
+    const isEnglish = language === 'en';
+    const langNote = isEnglish
+      ? 'IMPORTANT: Generate ALL text fields (judul, ringkasan, deskripsi, emosi, aksi_kunci) in ENGLISH.'
+      : 'Gunakan bahasa Indonesia yang santai dan ekspresif.';
+
+    const systemInstruction = isEnglish
+      ? `You are a professional viral scriptwriter specializing in short-form content for YouTube Shorts, TikTok, and Reels.
+Your task is to create a highly engaging, emotional, and entertaining STORY OUTLINE based on ${referenceImages.length > 0 ? 'the reference images and ' : ''}the user's idea.
+Output must be JSON with this exact structure:
+{
+  "judul": "Catchy and viral story title in English",
+  "genre": "${genre}",
+  "ringkasan": "2-3 sentence summary of the overall story in English",
+  "adegan": [
+    {
+      "no": 1,
+      "judul": "Short scene title in English",
+      "deskripsi": "Full description of what happens in this scene (2-3 sentences) in English",
+      "emosi": "Dominant emotion (funny/dramatic/surprising/sad/epic/etc)",
+      "aksi_kunci": "One memorable action or key dialogue line from this scene in English"
+    }
+  ]
+}
+
+IMPORTANT RULES:
+- Create EXACTLY ${sceneCount} scenes, no more, no less.
+- Each scene must have a clear flow and be interconnected.
+- Scene 1 MUST have a strong hook to retain viewers (twist, surprise, or intense funny/dramatic moment).
+- The last scene must have a satisfying ending or cliffhanger.
+- ${langNote}
+- Requested genre: ${genre}.
+${referenceImages.length > 0 ? '- MANDATORY: Pay attention to uploaded images. Use characters, objects, or situations in the images as main inspiration for the story.' : ''}`
+      : `Kamu adalah seorang penulis skenario viral profesional yang ahli membuat cerita pendek untuk YouTube Shorts, TikTok, dan Reels.
 Tugasmu adalah membuat ALUR CERITA (outline) yang sangat menarik, emosional, dan menghibur berdasarkan ${referenceImages.length > 0 ? 'gambar referensi dan ' : ''}ide yang diberikan pengguna.
 Output harus berupa JSON dengan struktur berikut persis:
 {
@@ -108,7 +140,7 @@ ATURAN PENTING:
 - Setiap adegan harus punya alur yang jelas dan saling berkaitan.
 - Adegan 1 WAJIB punya hook yang kuat untuk menahan penonton (twist, kejutan, atau momen lucu/dramatis yang intens).
 - Adegan terakhir harus punya ending yang memuaskan atau cliffhanger yang membuat penonton ingin terus menonton.
-- Gunakan bahasa Indonesia yang santai dan ekspresif.
+- ${langNote}
 - Genre yang diminta: ${genre}.
 ${referenceImages.length > 0 ? '- WAJIB perhatikan gambar yang diunggah pengguna. Gunakan karakter, objek, atau situasi dalam gambar tersebut sebagai inspirasi utama alur cerita.' : ''}`;
 
@@ -129,9 +161,13 @@ ${referenceImages.length > 0 ? '- WAJIB perhatikan gambar yang diunggah pengguna
       }
     }
 
-    const textPrompt = referenceImages.length > 0
-      ? `Buatkan alur cerita berdasarkan gambar referensi yang saya unggah ini. ${premise ? `\nIde tambahan/arahan dari saya: "${premise}"` : ''}\nGenre: ${genre}. Jumlah adegan: ${sceneCount}.`
-      : `Buatkan alur cerita untuk ide berikut: "${premise}". Genre: ${genre}. Jumlah adegan: ${sceneCount}.`;
+    const textPrompt = isEnglish
+      ? referenceImages.length > 0
+        ? `Create a story outline based on the reference images I uploaded. ${premise ? `\nAdditional direction from me: "${premise}"` : ''}\nGenre: ${genre}. Number of scenes: ${sceneCount}. Write everything in English.`
+        : `Create a story outline for the following idea: "${premise}". Genre: ${genre}. Number of scenes: ${sceneCount}. Write everything in English.`
+      : referenceImages.length > 0
+        ? `Buatkan alur cerita berdasarkan gambar referensi yang saya unggah ini. ${premise ? `\nIde tambahan/arahan dari saya: "${premise}"` : ''}\nGenre: ${genre}. Jumlah adegan: ${sceneCount}.`
+        : `Buatkan alur cerita untuk ide berikut: "${premise}". Genre: ${genre}. Jumlah adegan: ${sceneCount}.`;
 
     parts.push({ text: textPrompt });
 
@@ -189,7 +225,7 @@ app.post('/api/generate-flow-prompts', async (req, res) => {
     }
 
     const {
-      storyOutline, // Diterima dari Tahap 1
+      storyOutline, // Received from Stage 1
       animationStyle,
       referenceImages, // array of { mimeType: string, base64: string }
       parameters, // { duration, aspectRatio, resolution, promptCount, cameraMovement, lightingMood, fps }
@@ -211,24 +247,71 @@ app.post('/api/generate-flow-prompts', async (req, res) => {
     const isStandalone = !parameters.partNumber;
     const partText = parameters.partNumber ? `Part ${parameters.partNumber}` : null;
     const partLabel = partText || 'Video Standalone';
-    
-    const systemInstruction = `You are a world-class AI Storyboard Director and Visual Artist.
-Your PRIMARY MISSION is to analyze the storyboard reference images uploaded by the user (if any), then CREATE A BRAND NEW storyboard with ${promptCount} scenes that follows the same visual style, character design, color palette, and art direction.
+    const isEnglish = language === 'en';
 
-IMPORTANT RULES:
+    // ── Language configuration ──────────────────────────────────────────────
+    const narrativeLang = isEnglish
+      ? 'English for ALL story text fields: judul, storySummary, latar, alur.aksi, dialog.ucapan, audio, kamera, aturan, hooks, viralMetadata titles/hashtags/description/pinned_comment.'
+      : 'Indonesian (Bahasa Indonesia) for ALL story text fields: judul, storySummary, latar, alur.aksi, dialog.ucapan, audio, kamera, aturan, hooks, viralMetadata.';
+    const durText = isEnglish ? `${duration} seconds` : `${duration} detik`;
+    const watchCta = isStandalone
+      ? (isEnglish ? '📺 Watch this video until the end!' : '📺 Tonton video ini sampai habis!')
+      : (isEnglish ? `📺 Don't miss ${partText}!` : `📺 Jangan lewatkan ${partText} ini!`);
+    const subscribeCta = isEnglish
+      ? '🔔 Subscribe for more viral animation content!'
+      : '🔔 Subscribe untuk konten animasi viral berikutnya!';
+
+    // ── Build per-scene outline mapping (only when storyOutline is provided) ─
+    let outlineMappingRules = '';
+    if (storyOutline && storyOutline.adegan && Array.isArray(storyOutline.adegan)) {
+      const mappingLines = storyOutline.adegan.map((scene: any, i: number) =>
+        `  Scene ${i + 1} (adegan ${scene.no}): Title="${scene.judul}" | Description="${scene.deskripsi}" | Emotion="${scene.emosi}" | Key Action="${scene.aksi_kunci}"`
+      ).join('\n');
+      outlineMappingRules = `
+
+═══════════════════════════════════════════════════════════
+⚠️  MANDATORY STORY OUTLINE — YOU MUST FOLLOW THIS EXACTLY
+═══════════════════════════════════════════════════════════
+The user has already created this story outline in Stage 2. Your ONLY job in flowAiPrompts is to EXPAND each scene below into full storyboard prompts. DO NOT invent a different story. DO NOT skip or merge scenes.
+
+Per-Scene Mapping (STRICTLY follow this order):
+${mappingLines}
+
+For EACH scene above, apply these rules:
+- "judul" field: use the scene Title above (translated to ${isEnglish ? 'English' : 'Indonesian'} if needed)
+- "alur" field: expand the Description into 3-5 time-stamped action steps
+- "dialog" field: derive spoken lines directly from the Key Action
+- "audio" field: choose music/sound that fits the Emotion tag
+- "prompt" field: craft a text-to-image prompt that visually depicts the Description + Emotion
+
+The story title, summary, and overall narrative MUST match:
+- Story Title: "${storyOutline.judul}"
+- Genre: "${storyOutline.genre}"
+- Story Summary: "${storyOutline.ringkasan}"
+═══════════════════════════════════════════════════════════`;
+    }
+
+    // ── System instruction (mode-aware) ─────────────────────────────────────
+    const hasOutline = Boolean(storyOutline && storyOutline.adegan);
+    const missionStatement = hasOutline
+      ? `Your PRIMARY MISSION is to FAITHFULLY EXPAND the provided story outline into ${promptCount} fully-detailed storyboard scene prompts. You are a translator of story beats into visual prompts — NOT a creative writer inventing a new story.`
+      : `Your PRIMARY MISSION is to analyze the reference images (if any) and CREATE A BRAND NEW compelling storyboard with ${promptCount} scenes.`;
+
+    const systemInstruction = `You are a world-class AI Storyboard Director and Visual Prompt Engineer.
+${missionStatement}
+${outlineMappingRules}
+
+VISUAL RULES:
 - If reference images are uploaded: extract art style, character DNA, color palette, shading technique.
-- Create ENTIRELY NEW story scenes and narrative — do NOT copy the scenes from any reference images.
 - Maintain strict visual consistency across all generated scenes.
-- ${isStandalone ? 'This is a STANDALONE video. Do NOT add any "Part X" label to titles or descriptions. Make it a complete, self-contained story.' : `This generation is for "${partText}". All hooks, titles, and descriptions MUST explicitly mention or be themed around "${partText}".`}
+- ${isStandalone ? 'This is a STANDALONE video. Do NOT add any "Part X" label to titles or descriptions.' : `This generation is for "${partText}". All hooks, titles, and descriptions MUST explicitly mention or be themed around "${partText}".`}
 
 Target specifications:
 - Platform: YouTube Shorts / TikTok / Reels (vertical fast-paced viral animation)
-- Target Image Generator: Any (Midjourney, DALL-E, Stable Diffusion, etc)
-- Number of Scene Prompts: EXACTLY ${promptCount} scene images.
+- Number of Scene Prompts: EXACTLY ${promptCount} scene images — no more, no less.
 - Each scene duration: ${duration} seconds
-- Aspect Ratio: ${aspectRatio}
-- Resolution: ${resolution}
-- Default Camera Movement style: ${cameraMovement}
+- Aspect Ratio: ${aspectRatio} | Resolution: ${resolution}
+- Camera Movement style: ${cameraMovement}
 - Lighting & Mood: ${lightingMood}
 - Motion & FPS: ${fps}
 - Animation Style: ${style}
@@ -236,36 +319,34 @@ Target specifications:
 Output Requirements:
 1. "storyTitle": Catchy, viral-worthy title. ${isStandalone ? 'No part label needed.' : `Must include "${partText}".`}
 2. "storySummary": 2-3 sentence overview of the story.
-3. "visualStyleGuide": Extremely detailed visual consistency guide. Include: art style name, color palette (specific colors), character design details, line weight, shading technique, background style, rendering quality keywords.
-4. "characterDNA": Array of characters. For each: name, age_appearance, species_race, skin_tone, hair, eyes, outfit_main, outfit_accessories, distinctive_features, art_style, color_palette, and a "full_prompt_dna" string (highly detailed English prompt-ready string).
-5. "flowAiPrompts": Array of EXACTLY ${promptCount} scenes. For each scene:
-   - "part": number (use ${parameters?.partNumber || 0} — use 0 for standalone)
-   - "judul": string (Scene heading/title)
-   - "adegan": number (scene number, starting from 1)
-   - "durasi": string (e.g. "${duration} detik")
-   - "prompt": A masterfully crafted text-to-image prompt. MUST include: [Character DNA / full_prompt_dna], [Action/pose], [Art style: ${style}], [Environment & Background], [Camera Angle], [Lighting: ${lightingMood}]. For Scene 1 ONLY, prepend a HOOK visual to the prompt (e.g. "HOOK VISUAL: extreme close-up of the character's shocked face, ...").
-   - "latar": string (Setting description in Indonesian)
-   - "alur": Array of objects { "waktu": string, "aksi": string } describing actions over time.
-   - "dialog": Array of objects { "karakter": string, "waktu": string, "ucapan": string } for spoken lines.
-   - "audio": string (Background music or sound effects)
-   - "kamera": string (Camera movement or composition)
-   - "aturan": Array of strings (Consistency rules, e.g. "Tidak ada tulisan di gambar")
-6. "hooks": Array of 3 high-retention text hooks for the 0-3 second window of YouTube Shorts. Each hook should be a single sentence in Indonesian that creates instant curiosity or shock. ${isStandalone ? 'Make hooks standalone-appropriate.' : `Tailor hooks for "${partText}".`}
-7. "viralMetadata":
-   - "viral_titles": Array of 5 alternative viral titles (Indonesian)
-   - "viral_hashtags": Array of 10 primary hashtags (mix of Indonesian and English)
-   - "youtube_description": A WELL-STRUCTURED YouTube description. Format it as follows:
-     Line 1: Hook/opening sentence (emotional or curiosity-driven).
-     Line 2-3: Brief story synopsis (2 sentences).
-     Line 4: Empty line.
-     Line 5: ${isStandalone ? '📺 Tonton video ini sampai habis!' : `📺 Jangan lewatkan ${partText} ini!`}
-     Line 6: 🔔 Subscribe untuk konten animasi viral berikutnya!
-     Line 7: Empty line.
-     Line 8: TAGS: [list of relevant tags separated by space]
-   - "supporting_hashtags": Array of category objects { "category": string, "tags": string[] }
-   - "pinned_comment_suggestion": A single comment to be pinned (Indonesian), engaging viewers to comment or share.
+3. "visualStyleGuide": Extremely detailed visual consistency guide (art style, color palette, shading, background, rendering keywords).
+4. "characterDNA": Array of characters with full_prompt_dna in ENGLISH always (for image generators).
+5. "flowAiPrompts": Array of EXACTLY ${promptCount} scenes. For each:
+   - "part": ${parameters?.partNumber || 0}
+   - "judul": Scene heading/title
+   - "adegan": scene number (1-based)
+   - "durasi": "${durText}"
+   - "prompt": Masterfully crafted text-to-image prompt in ENGLISH (always English for image generators). MUST include: [Character DNA], [Action/pose], [Art style: ${style}], [Environment], [Camera Angle], [Lighting]. Scene 1 ONLY: prepend "HOOK VISUAL: ..."
+   - "latar": Setting description
+   - "alur": Array of { "waktu": string, "aksi": string } — 3-5 time-stamped action steps
+   - "dialog": Array of { "karakter": string, "waktu": string, "ucapan": string }
+   - "audio": Background music or sound effects
+   - "kamera": Camera movement or composition
+   - "aturan": Array of visual consistency rules
+6. "hooks": Array of 3 high-retention text hooks for 0-3 second window.
+7. "viralMetadata": viral_titles (5), viral_hashtags (10), youtube_description (formatted), supporting_hashtags, pinned_comment_suggestion.
 
-Language: Indonesian for all story fields, dialog, audio, rules, and metadata. English ONLY for prompt engineering keywords inside "prompt" and "full_prompt_dna".`;
+LANGUAGE RULES:
+- "prompt" and "full_prompt_dna" fields: ALWAYS in English (required for image generators).
+- ALL other narrative text fields: use ${narrativeLang}
+- youtube_description format:
+  Line 1: Hook sentence.
+  Line 2-3: Story synopsis.
+  Line 4: (empty)
+  Line 5: ${watchCta}
+  Line 6: ${subscribeCta}
+  Line 7: (empty)
+  Line 8: TAGS: [relevant tags]`;
 
     const parts: any[] = [];
 
@@ -273,7 +354,6 @@ Language: Indonesian for all story fields, dialog, audio, rules, and metadata. E
     if (Array.isArray(referenceImages) && referenceImages.length > 0) {
       for (const img of referenceImages) {
         if (img.base64) {
-          // Remove prefix if present: data:image/png;base64,...
           const cleanBase64 = img.base64.replace(/^data:image\/[a-zA-Z+]+;base64,/, '');
           parts.push({
             inlineData: {
@@ -289,41 +369,38 @@ Language: Indonesian for all story fields, dialog, audio, rules, and metadata. E
       ? 'This is a STANDALONE video — no Part label.'
       : `This is ${partText} of a multi-part series.`;
 
-    const storyOutlineText = storyOutline
-      ? `\n\nPRE-GENERATED STORY OUTLINE (MUST FOLLOW STRICTLY):\n${JSON.stringify(storyOutline, null, 2)}\n\nYour task is to translate this exact outline into ${promptCount} highly detailed scene prompts. Do NOT change the core story.`
-      : '';
-
     const userPromptText = referenceImages && referenceImages.length > 0
       ? `STORYBOARD GENERATION REQUEST (${partLabel}):
 
 You have been provided with ${referenceImages.length} reference storyboard image(s).
-${partContext}${storyOutlineText}
-
+${partContext}
+${hasOutline ? `
+The story outline is already defined in the system instruction above — FOLLOW IT EXACTLY.
+Your job: translate each outlined scene into a full visual storyboard prompt.` : `
 YOUR TASK:
 1. Carefully analyze each reference image to extract: art style, character design, color palette, line art style, shading technique, background style, and overall visual aesthetic.
-2. ${storyOutline ? 'Translate the provided STORY OUTLINE into scene prompts.' : `Create ${promptCount} BRAND NEW storyboard scenes with a COMPLETELY NEW story/narrative.`}
+2. Create ${promptCount} BRAND NEW storyboard scenes with a COMPLETELY NEW story/narrative.
 3. Every generated scene prompt must faithfully replicate the visual style from the reference images and inject the extracted Character DNA.
-4. Scene 1's "prompt" field MUST begin with a HOOK visual (e.g. extreme close-up, dramatic reveal).
+4. Scene 1's "prompt" field MUST begin with a HOOK visual (e.g. extreme close-up, dramatic reveal).`}
 
 Flow AI Configuration:
 * Aspect Ratio: ${aspectRatio} | Resolution: ${resolution} | Duration per scene: ${duration}s
 * Camera Style: ${cameraMovement} | Lighting: ${lightingMood} | FPS: ${fps}
+* Output language for narrative: ${isEnglish ? 'English' : 'Indonesian'}
 
 Generate the complete JSON now.`
       : `STORYBOARD GENERATION REQUEST (${partLabel} — Text-Only):
-${partContext}${storyOutlineText}
+${partContext}
+${hasOutline ? `
+The story outline is already defined in the system instruction above — FOLLOW IT EXACTLY.
+Translate each scene from the outline into a full storyboard prompt.` : `
+Create a compelling original story. Animation Style: ${style}`}
 
-${storyOutline ? 'Translate the provided STORY OUTLINE above into scene prompts.' : 'Create a compelling original story based on the visual style.'}
-
-Animation Style: ${style}
 Aspect Ratio: ${aspectRatio} | Resolution: ${resolution} | Duration per scene: ${duration}s
 Camera: ${cameraMovement} | Lighting: ${lightingMood} | FPS: ${fps}
-
-Scene 1's "prompt" field MUST begin with a HOOK visual (e.g. extreme close-up, shocking expression, dramatic reveal).
+Output language for narrative: ${isEnglish ? 'English' : 'Indonesian'}
 
 Generate the complete JSON now.`;
-
-
 
     parts.push({ text: userPromptText });
 

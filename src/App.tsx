@@ -27,6 +27,7 @@ export default function App() {
   const [storyOutline, setStoryOutline] = useState<StoryOutline | null>(null);
   const [animationStyle, setAnimationStyle] = useState<string>('Shonen Anime Action');
   const [referenceImages, setReferenceImages] = useState<ReferenceImageItem[]>([]);
+  const [language, setLanguage] = useState<'id' | 'en'>('id');
   const [parameters, setParameters] = useState<FlowAiVideoParams>({
     duration: 5,
     aspectRatio: '9:16',
@@ -102,7 +103,7 @@ export default function App() {
           base64: img.base64,
         })),
         parameters,
-        language: 'id',
+        language,
       };
 
       const res = await fetch('/api/generate-flow-prompts', {
@@ -355,6 +356,8 @@ export default function App() {
             sceneCount={parameters.promptCount}
             isGenerating={isGenerating}
             referenceImages={referenceImages}
+            language={language}
+            setLanguage={setLanguage}
           />
 
           {/* Step 2: Flow AI Video Parameters */}

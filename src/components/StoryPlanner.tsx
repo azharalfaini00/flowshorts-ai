@@ -41,10 +41,12 @@ interface StoryPlannerProps {
   setStoryOutline: (outline: StoryOutline | null) => void;
   sceneCount: number;
   isGenerating: boolean;
-  referenceImages: any[]; // Or properly import ReferenceImageItem
+  referenceImages: any[];
+  language: 'id' | 'en';
+  setLanguage: (lang: 'id' | 'en') => void;
 }
 
-export default function StoryPlanner({ storyOutline, setStoryOutline, sceneCount, isGenerating, referenceImages = [] }: StoryPlannerProps) {
+export default function StoryPlanner({ storyOutline, setStoryOutline, sceneCount, isGenerating, referenceImages = [], language, setLanguage }: StoryPlannerProps) {
   const [premise, setPremise] = useState('');
   const [genre, setGenre] = useState('Komedi Dramatis');
   const [isGeneratingStory, setIsGeneratingStory] = useState(false);
@@ -62,6 +64,7 @@ export default function StoryPlanner({ storyOutline, setStoryOutline, sceneCount
         premise: premise.trim(), 
         genre, 
         sceneCount,
+        language,
         referenceImages: referenceImages.map(img => ({
           mimeType: img.mimeType,
           base64: img.base64,
@@ -119,6 +122,42 @@ export default function StoryPlanner({ storyOutline, setStoryOutline, sceneCount
 
       {/* Input area */}
       <div className="space-y-3">
+        {/* Language Toggle */}
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+            Bahasa Output / Output Language
+          </label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={isGeneratingStory || isGenerating}
+              onClick={() => setLanguage('id')}
+              className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${
+                language === 'id'
+                  ? 'border-rose-500 bg-rose-500 text-white shadow-xs'
+                  : 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
+              }`}
+            >
+              🇮🇩 <span>Indonesia</span>
+            </button>
+            <button
+              type="button"
+              disabled={isGeneratingStory || isGenerating}
+              onClick={() => setLanguage('en')}
+              className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${
+                language === 'en'
+                  ? 'border-sky-500 bg-sky-500 text-white shadow-xs'
+                  : 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
+              }`}
+            >
+              🇬🇧 <span>English</span>
+            </button>
+          </div>
+          <p className="mt-1 text-[10px] text-zinc-400 dark:text-zinc-500">
+            {language === 'id' ? 'Alur cerita & JSON akan dibuat dalam Bahasa Indonesia. Prompt gambar tetap English.' : 'Story outline & JSON will be generated in English. Image prompts are always English.'}
+          </p>
+        </div>
+
         <div>
           <label className="mb-1.5 block text-xs font-semibold text-zinc-800 dark:text-zinc-200">
             Ide / Premis Cerita

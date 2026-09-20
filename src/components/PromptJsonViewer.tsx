@@ -17,6 +17,7 @@ export default function PromptJsonViewer({
   const storyTitle = project.title || '';
   const [activeTab, setActiveTab] = useState<'cards' | 'json'>('json');
   const [copiedAll, setCopiedAll] = useState(false);
+  const [copiedAllPrompts, setCopiedAllPrompts] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(0);
   const [refiningIndex, setRefiningIndex] = useState<number | null>(null);
@@ -32,6 +33,23 @@ export default function PromptJsonViewer({
       setTimeout(() => setCopiedAll(false), 2000);
     } catch (err) {
       console.error('Failed to copy JSON:', err);
+    }
+  };
+
+  const handleCopyAllPrompts = async () => {
+    try {
+      const allPromptsText = prompts
+        .map((scene, idx) => {
+          const sceneNum = scene.adegan ?? idx + 1;
+          const title = scene.judul || `Scene ${sceneNum}`;
+          return `=== Scene ${sceneNum}: ${title} ===\n${scene.prompt}`;
+        })
+        .join('\n\n');
+      await navigator.clipboard.writeText(allPromptsText);
+      setCopiedAllPrompts(true);
+      setTimeout(() => setCopiedAllPrompts(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy prompts:', err);
     }
   };
 
@@ -116,6 +134,17 @@ export default function PromptJsonViewer({
               <span>Raw JSON</span>
             </button>
           </div>
+
+          {/* Quick Copy All Prompts (plain text) */}
+          <button
+            type="button"
+            onClick={handleCopyAllPrompts}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-sky-700 dark:bg-sky-700 dark:hover:bg-sky-600"
+            title="Salin semua field 'prompt' dari setiap scene (plain text)"
+          >
+            {copiedAllPrompts ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Copy className="h-3.5 w-3.5" />}
+            <span>{copiedAllPrompts ? 'Tersalin!' : 'Salin Semua Prompt'}</span>
+          </button>
 
           {/* Quick Copy All JSON */}
           <button
