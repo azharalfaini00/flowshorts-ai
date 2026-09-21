@@ -262,7 +262,7 @@ export default function FlowAiParameters({
           type="button"
           disabled={isGenerating || !canGenerate}
           onClick={onGenerate}
-          className={`group flex items-center justify-center gap-2 rounded-xl bg-linear-to-r from-rose-500 to-indigo-500 px-6 py-3 font-bold text-white shadow-lg transition-all hover:shadow-xl sm:w-auto ${
+          className={`group flex w-full items-center justify-center gap-2 rounded-xl bg-linear-to-r from-rose-500 to-indigo-500 px-6 py-3.5 font-bold text-white shadow-lg transition-all hover:shadow-xl sm:w-auto ${
             isGenerating || !canGenerate ? 'cursor-not-allowed opacity-50 grayscale' : ''
           }`}
         >

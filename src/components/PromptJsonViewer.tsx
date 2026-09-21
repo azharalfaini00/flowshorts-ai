@@ -85,7 +85,7 @@ export default function PromptJsonViewer({
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
       {/* Header bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 p-5 dark:border-zinc-800">
+      <div className="flex flex-col gap-3 border-b border-zinc-100 p-4 sm:p-5 dark:border-zinc-800">
         <div>
           <div className="flex items-center gap-2">
             <span className="rounded-md bg-rose-100 px-2 py-0.5 text-xs font-bold text-rose-700 dark:bg-rose-950/70 dark:text-rose-300">
@@ -203,7 +203,7 @@ export default function PromptJsonViewer({
       )}
 
       {/* Main Content: Cards or Raw JSON */}
-      <div className="p-5">
+      <div className="p-3 sm:p-5">
         {activeTab === 'cards' ? (
           <div className="space-y-3">
             {prompts.map((scene, idx) => {
@@ -437,7 +437,7 @@ export default function PromptJsonViewer({
                         <span>{isCopied ? 'Tersalin!' : 'Salin JSON Adegan'}</span>
                       </button>
                     </div>
-                    <pre className="p-4 font-mono text-xs text-emerald-400 overflow-x-auto">
+                    <pre className="p-3 sm:p-4 font-mono text-[11px] sm:text-xs text-emerald-400 overflow-x-auto whitespace-pre">
                       <code>{sceneJson}</code>
                     </pre>
                   </div>

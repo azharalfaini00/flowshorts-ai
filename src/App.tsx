@@ -287,14 +287,14 @@ export default function App() {
       />
 
       {/* Main Container */}
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+      <main className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-8">
         {/* Intro banner */}
         <div className="mb-6 rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="flex items-center gap-2">
                 <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                <h1 className="text-xl font-black uppercase tracking-tight text-zinc-900 sm:text-2xl dark:text-zinc-100">
+                <h1 className="text-base font-black uppercase tracking-tight text-zinc-900 sm:text-2xl dark:text-zinc-100">
                   FlowShorts AI
                   <span className="ml-2 bg-(--gradient-brand) bg-clip-text text-transparent">
                     Visual Storyboard Generator
@@ -338,7 +338,7 @@ export default function App() {
 
         {/* Success Toast */}
         {successToast && (
-          <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl bg-zinc-900 px-4 py-3 text-xs font-semibold text-white shadow-2xl dark:bg-white dark:text-zinc-900 animate-in fade-in slide-in-from-bottom-5">
+          <div className="fixed bottom-4 left-4 right-4 z-50 sm:left-auto sm:right-6 sm:bottom-6 sm:w-auto flex items-center gap-2 rounded-xl bg-zinc-900 px-4 py-3 text-xs font-semibold text-white shadow-2xl dark:bg-white dark:text-zinc-900 animate-in fade-in slide-in-from-bottom-5">
             <CheckCircle2 className="h-4 w-4 text-emerald-400" />
             <span>{successToast}</span>
           </div>

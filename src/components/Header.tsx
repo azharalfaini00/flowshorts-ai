@@ -21,9 +21,9 @@ export default function Header({
 
   return (
     <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/95 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/95">
-      <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center justify-between px-4 py-3 sm:px-6">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-2.5 sm:px-6 sm:py-3">
         {/* Brand identity */}
-        <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
+        <div className="flex min-w-0 items-center gap-2">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-amber-500 via-rose-500 to-indigo-600 text-white shadow-md shadow-rose-500/20">
             <Film className="h-5 w-5" />
           </div>
@@ -42,8 +42,8 @@ export default function Header({
           </div>
         </div>
 
-        {/* Action buttons */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+        {/* Action buttons — icon-only on mobile, labeled on sm+ */}
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           {status === 'admin' && (
             <Link
               to="/admin"

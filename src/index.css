@@ -269,3 +269,91 @@ button:active:not(:disabled) {
   background: rgba(239, 68, 68, 0.2);
   color: inherit;
 }
+
+/* ─── Mobile / Responsive Fixes ──────────────────────────── */
+
+/* Prevent horizontal overflow globally on mobile */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Make sure no element can be wider than viewport */
+*, *::before, *::after {
+  max-width: 100%;
+}
+
+/* Improve tap target sizes on mobile */
+@media (max-width: 640px) {
+  button, [role="button"] {
+    min-height: 36px;
+  }
+
+  /* Code blocks: horizontal scroll on mobile */
+  pre, .code-block {
+    overflow-x: auto;
+    max-width: 100%;
+    font-size: 0.65rem;
+  }
+
+  /* Header action buttons: smaller text + tighter padding */
+  header button span {
+    font-size: 0.65rem;
+  }
+
+  /* Toast notification: full-width on mobile */
+  .toast-fixed {
+    bottom: 1rem;
+    left: 1rem;
+    right: 1rem;
+    width: auto;
+  }
+
+  /* Images in grid: 2-col on mobile */
+  .image-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Modal: full-screen on mobile */
+  .modal-inner {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 1rem 1rem 0 0;
+    margin-top: auto;
+  }
+
+  /* Prevent select/input from zooming on iOS */
+  select, input, textarea {
+    font-size: 16px !important;
+  }
+
+  /* Section labels: smaller on mobile */
+  .text-sm { font-size: 0.8rem; }
+  .text-xs { font-size: 0.7rem; }
+}
+
+/* Tablet (iPad, 641px - 1024px) */
+@media (min-width: 641px) and (max-width: 1024px) {
+  /* Better grid layout for tablet */
+  .tablet-2col {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ─── Touch-friendly Improvements ────────────────────────── */
+@media (hover: none) and (pointer: coarse) {
+  /* On touch screens, show hover overlays by default */
+  .group:active .group-hover\:opacity-100 {
+    opacity: 1 !important;
+  }
+
+  /* Make scrollbars invisible on touch */
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Larger touch targets for all icon buttons */
+  button.rounded-full {
+    padding: 0.5rem;
+  }
+}
