@@ -27,7 +27,6 @@ async function generateImageWithDallE(
     n: 1,
     size: dalleSize,
     quality,
-    response_format: 'url',
   });
   const imageUrl = response.data?.[0]?.url;
   if (!imageUrl) throw new Error('DALL-E 3 tidak mengembalikan URL gambar.');
