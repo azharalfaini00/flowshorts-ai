@@ -117,7 +117,7 @@ export const INITIAL_PRESET_PROJECT: StoryboardProject = {
       voiceover_or_dialogue: '"Lanjut part 2? Klik subscribe sekarang!"',
       keyframe_visual_description: 'Bilah pedang membelah layar dengan kilatan cahaya ungu pekat tepat sebelum fade-to-black.',
     },
-  ],
+  ] as any[],
   hooks: [
     {
       type: 'Visual Shock Hook (0-3 Detik)',

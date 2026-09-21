@@ -47,6 +47,22 @@ async function generateImageWithDallE(
   return { url: imageUrl, source: 'dalle3' };
 }
 
+async function generateWithFallback(ai: GoogleGenAI, params: any) {
+  const models = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
+  let lastError: any = null;
+  for (const model of models) {
+    try {
+      const response = await ai.models.generateContent({ ...params, model });
+      if (response && response.text) return response;
+    } catch (err: any) {
+      console.warn(`Model ${model} failed:`, err?.message || err);
+      lastError = err;
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+    }
+  }
+  throw lastError;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
