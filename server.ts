@@ -250,9 +250,7 @@ app.post('/api/generate-flow-prompts', async (req, res) => {
     const isEnglish = language === 'en';
 
     // ── Language configuration ──────────────────────────────────────────────
-    const narrativeLang = isEnglish
-      ? 'English for ALL story text fields: judul, storySummary, latar, alur.aksi, dialog.ucapan, audio, kamera, aturan, hooks, viralMetadata titles/hashtags/description/pinned_comment.'
-      : 'Indonesian (Bahasa Indonesia) for ALL story text fields: judul, storySummary, latar, alur.aksi, dialog.ucapan, audio, kamera, aturan, hooks, viralMetadata.';
+    const requestedLanguageText = isEnglish ? 'ENGLISH' : 'INDONESIAN (Bahasa Indonesia)';
     const durText = isEnglish ? `${duration} seconds` : `${duration} detik`;
     const watchCta = isStandalone
       ? (isEnglish ? '📺 Watch this video until the end!' : '📺 Tonton video ini sampai habis!')
@@ -278,11 +276,11 @@ Per-Scene Mapping (STRICTLY follow this order):
 ${mappingLines}
 
 For EACH scene above, apply these rules:
-- "judul" field: use the scene Title above (translated to ${isEnglish ? 'English' : 'Indonesian'} if needed)
+- "judul" field: use the scene Title above
 - "alur" field: expand the Description into 3-5 time-stamped action steps
 - "dialog" field: derive spoken lines directly from the Key Action
 - "audio" field: choose music/sound that fits the Emotion tag
-- "prompt" field: craft a text-to-image prompt that visually depicts the Description + Emotion
+- "prompt" field: craft a descriptive prompt that visually depicts the Description + Emotion
 
 The story title, summary, and overall narrative MUST match:
 - Story Title: "${storyOutline.judul}"
@@ -300,6 +298,11 @@ The story title, summary, and overall narrative MUST match:
     const systemInstruction = `You are a world-class AI Storyboard Director and Visual Prompt Engineer.
 ${missionStatement}
 ${outlineMappingRules}
+
+STORYLINE CONTINUITY RULES (CRITICAL):
+- The scenes MUST form a single, continuous, and logical storyline.
+- Scene 1 must lead directly into Scene 2, Scene 2 into Scene 3, and so on. 
+- Do not create disjointed, repetitive, or independent scenes. The storyline must progress forward seamlessly.
 
 VISUAL RULES:
 - If reference images are uploaded: extract art style, character DNA, color palette, shading technique.
@@ -320,13 +323,13 @@ Output Requirements:
 1. "storyTitle": Catchy, viral-worthy title. ${isStandalone ? 'No part label needed.' : `Must include "${partText}".`}
 2. "storySummary": 2-3 sentence overview of the story.
 3. "visualStyleGuide": Extremely detailed visual consistency guide (art style, color palette, shading, background, rendering keywords).
-4. "characterDNA": Array of characters with full_prompt_dna in ENGLISH always (for image generators).
+4. "characterDNA": Array of characters with full_prompt_dna.
 5. "flowAiPrompts": Array of EXACTLY ${promptCount} scenes. For each:
    - "part": ${parameters?.partNumber || 0}
    - "judul": Scene heading/title
    - "adegan": scene number (1-based)
    - "durasi": "${durText}"
-   - "prompt": Masterfully crafted text-to-image prompt in ENGLISH (always English for image generators). MUST include: [Character DNA], [Action/pose], [Art style: ${style}], [Environment], [Camera Angle], [Lighting]. Scene 1 ONLY: prepend "HOOK VISUAL: ..."
+   - "prompt": Masterfully crafted text-to-image prompt. MUST include: [Character DNA], [Action/pose], [Art style: ${style}], [Environment], [Camera Angle], [Lighting]. Scene 1 ONLY: prepend "HOOK VISUAL: ..."
    - "latar": Setting description
    - "alur": Array of { "waktu": string, "aksi": string } — 3-5 time-stamped action steps
    - "dialog": Array of { "karakter": string, "waktu": string, "ucapan": string }
@@ -336,9 +339,9 @@ Output Requirements:
 6. "hooks": Array of 3 high-retention text hooks for 0-3 second window.
 7. "viralMetadata": viral_titles (5), viral_hashtags (10), youtube_description (formatted), supporting_hashtags, pinned_comment_suggestion.
 
-LANGUAGE RULES:
-- "prompt" and "full_prompt_dna" fields: ALWAYS in English (required for image generators).
-- ALL other narrative text fields: use ${narrativeLang}
+LANGUAGE RULES (STRICT):
+- You MUST generate ALL text fields in the JSON in the requested language: ${requestedLanguageText}.
+- This includes "prompt", "full_prompt_dna", "judul", "latar", "alur.aksi", "dialog.ucapan", "aturan", "hooks", and ALL other fields. DO NOT output English unless English is the requested language.
 - youtube_description format:
   Line 1: Hook sentence.
   Line 2-3: Story synopsis.

@@ -69,6 +69,11 @@ IMPORTANT RULES:
 - Maintain strict visual consistency across all generated scenes.
 - ${isStandalone ? 'This is a STANDALONE video. Do NOT add any "Part X" label to titles or descriptions. Make it a complete, self-contained story.' : `This generation is for "${partText}". All hooks, titles, and descriptions MUST explicitly mention or be themed around "${partText}".`}
 
+STORYLINE CONTINUITY RULES (CRITICAL):
+- The scenes MUST form a single, continuous, and logical storyline.
+- Scene 1 must lead directly into Scene 2, Scene 2 into Scene 3, and so on. 
+- Do not create disjointed, repetitive, or independent scenes. The storyline must progress forward seamlessly.
+
 Target specifications:
 - Platform: YouTube Shorts / TikTok / Reels (vertical fast-paced viral animation)
 - Target Image Generator: Any (Midjourney, DALL-E, Stable Diffusion, etc)
@@ -90,7 +95,9 @@ Output Requirements:
 6. "hooks": Array of 3 high-retention text hooks.
 7. "viralMetadata": viral_titles, viral_hashtags, youtube_description, supporting_hashtags, pinned_comment_suggestion.
 
-Language: Indonesian for all story fields. English ONLY for prompt engineering keywords inside "prompt" and "full_prompt_dna".`;
+LANGUAGE RULES (STRICT):
+- You MUST generate ALL text fields in the JSON in the requested language: ${language === 'en' ? 'ENGLISH' : 'INDONESIAN (Bahasa Indonesia)'}.
+- This includes "prompt", "full_prompt_dna", and ALL other fields. DO NOT output English unless English is the requested language.`;
 
     const parts: any[] = [];
 
