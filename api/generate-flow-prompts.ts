@@ -74,6 +74,11 @@ STORYLINE CONTINUITY RULES (CRITICAL):
 - Scene 1 must lead directly into Scene 2, Scene 2 into Scene 3, and so on. 
 - Do not create disjointed, repetitive, or independent scenes. The storyline must progress forward seamlessly.
 
+CHARACTER DNA & CONSISTENCY (CRITICAL):
+- If reference images are provided, YOU MUST STRICTLY preserve the Character DNA (clothing, hair, facial features, accessories, colors).
+- DO NOT change character appearances or add random elements not present in the reference images.
+- Maintain absolute character consistency across EVERY scene in the storyboard. The character must look EXACTLY the same in all prompts.
+
 Target specifications:
 - Platform: YouTube Shorts / TikTok / Reels (vertical fast-paced viral animation)
 - Target Image Generator: Any (Midjourney, DALL-E, Stable Diffusion, etc)
