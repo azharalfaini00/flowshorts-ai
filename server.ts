@@ -123,7 +123,7 @@ app.post('/api/generate-image', async (req, res) => {
 });
 
 async function generateWithFallback(ai: GoogleGenAI, params: any) {
-  const models = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
+  const models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-8b'];
   let lastError: any = null;
   for (const model of models) {
     try {
