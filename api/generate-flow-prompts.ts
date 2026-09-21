@@ -176,7 +176,8 @@ Output Requirements:
 4. "characterDNA": Global array of characters.
 5. "flowAiPrompts": Array of EXACTLY ${promptCount} highly detailed scenes. Each scene MUST follow the new advanced schema:
    - "project", "scene", "duration", "continuity_priority", "reference_storyboard"
-   - "adegan" (integer scene number), "judul" (scene title), "prompt" (master text-to-image prompt)
+   - "adegan" (integer scene number), "judul" (scene title)
+   - "prompt" (master text-to-image prompt). VERY IMPORTANT: The "prompt" string MUST ALWAYS begin with the Story Summary and the Character DNA definitions for the characters in the scene, before describing the specific scene action. This ensures the prompt can be used standalone in an image generator.
    - "character_dna_lock": A dictionary where keys are character names and values are their specific DNA lock for this scene (identity, appearance, clothing, body, voice).
    - "environment": location, time, weather, visual_style, continuity.
    - "camera": opening_shot, movement, framing, ending_position.
