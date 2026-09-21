@@ -13,7 +13,7 @@ function getAIClient(): GoogleGenAI {
 }
 
 async function generateWithFallback(ai: GoogleGenAI, params: any) {
-  const models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-8b'];
+  const models = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.0-pro'];
   let lastError: any = null;
   for (const model of models) {
     try {
