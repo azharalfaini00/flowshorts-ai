@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Type } from '@google/genai';
+import OpenAI from 'openai';
 
 function getAIClient(): GoogleGenAI {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -10,20 +11,39 @@ function getAIClient(): GoogleGenAI {
   });
 }
 
-async function generateWithFallback(ai: GoogleGenAI, params: any) {
-  const models = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
-  let lastError: any = null;
-  for (const model of models) {
-    try {
-      const response = await ai.models.generateContent({ ...params, model });
-      if (response && response.text) return response;
-    } catch (err: any) {
-      console.warn(`Model ${model} failed:`, err?.message || err);
-      lastError = err;
-      await new Promise((resolve) => setTimeout(resolve, 1200));
-    }
-  }
-  throw lastError;
+function getOpenAIClient(): OpenAI {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error('OPENAI_API_KEY is missing.');
+  return new OpenAI({ apiKey });
+}
+
+async function generateImageWithDallE(
+  prompt: string,
+  aspectRatio: string = '1:1',
+  quality: 'standard' | 'hd' = 'standard'
+): Promise<{ url: string; source: 'dalle3' }> {
+  const openaiKey = process.env.OPENAI_API_KEY;
+  if (!openaiKey) throw new Error('OPENAI_API_KEY tidak ditemukan.');
+
+  // Map aspect ratio ke ukuran DALL-E 3 yang didukung
+  let dalleSize: '1024x1024' | '1792x1024' | '1024x1792' = '1024x1024';
+  if (aspectRatio === '16:9') dalleSize = '1792x1024';
+  else if (aspectRatio === '9:16') dalleSize = '1024x1792';
+
+  const openai = getOpenAIClient();
+  // DALL-E 3 bekerja lebih baik dengan prompt Inggris, maks 4000 karakter
+  const cleanPrompt = prompt.slice(0, 3900);
+  const response = await openai.images.generate({
+    model: 'dall-e-3',
+    prompt: cleanPrompt,
+    n: 1,
+    size: dalleSize,
+    quality,
+    response_format: 'url',
+  });
+  const imageUrl = response.data?.[0]?.url;
+  if (!imageUrl) throw new Error('DALL-E 3 tidak mengembalikan URL gambar.');
+  return { url: imageUrl, source: 'dalle3' };
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -63,17 +83,16 @@ scene_number, scene_title, prompt, negative_prompt, duration_seconds, aspect_rat
     if (!text) throw new Error('No response from model');
     const updated = JSON.parse(text);
 
-    const imagePrompt = `${animationStyle}, ${updated.prompt}, ${updated.keyframe_visual_description}`;
-    let w = 1024, h = 1024;
-    if (updated.aspect_ratio === '9:16') { w = 576; h = 1024; }
-    else if (updated.aspect_ratio === '16:9') { w = 1024; h = 576; }
-    else if (updated.aspect_ratio === '4:5') { w = 819; h = 1024; }
-    const seed = Math.floor(Math.random() * 9999999);
-    updated.image_url = `https://image.pollinations.ai/prompt/${encodeURIComponent(imagePrompt)}?width=${w}&height=${h}&nologo=true&seed=${seed}`;
+    // Update image_url for refined scene using DALL-E 3
+    const imagePrompt = `${animationStyle}, ${updated.prompt}, ${updated.keyframe_visual_description || ''}, masterpiece, best quality`;
+    const refinedAspect = updated.aspect_ratio || '1:1';
+    const imgResult = await generateImageWithDallE(imagePrompt, refinedAspect);
+    updated.image_url = imgResult.url;
+    updated.image_source = imgResult.source;
 
     res.json(updated);
   } catch (error: any) {
     console.error('Error in /api/refine-prompt:', error);
-    res.status(500).json({ error: error?.message || 'Gagal merevisi prompt' });
+    res.status(500).json({ error: error.message || 'Gagal merevisi prompt' });
   }
 }
