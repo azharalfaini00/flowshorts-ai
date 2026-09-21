@@ -50,19 +50,60 @@ export interface DialogAction {
   ucapan: string;
 }
 
+export interface CharacterSceneDNA {
+  identity: string;
+  appearance: string;
+  clothing: string;
+  body: string;
+  voice: string;
+}
+
+export interface SceneEnvironment {
+  location: string;
+  time: string;
+  weather: string;
+  visual_style: string;
+  continuity: string;
+}
+
+export interface SceneCamera {
+  opening_shot: string;
+  movement: string;
+  framing: string;
+  ending_position: string;
+}
+
+export interface SceneStory {
+  action: string;
+  dialogue: Array<{ speaker: string; line: string }>;
+  ending_action: string;
+}
+
+export interface SceneAudio {
+  music: string;
+  sound_effects: string;
+  dialogue_rule: string;
+}
+
 export interface ScenePrompt {
-  part: number;
-  judul: string;
-  adegan: number;
-  durasi: string;
-  prompt: string;
-  latar: string;
-  alur: AlurAction[];
-  dialog: DialogAction[];
-  audio: string;
-  kamera: string;
-  aturan: string[];
-  image_url?: string;
+  project: string;
+  scene: string;
+  adegan: number; // For internal indexing
+  judul: string;  // Scene title
+  prompt: string; // The text-to-image prompt
+  duration: string;
+  continuity_priority: string;
+  reference_storyboard: string;
+  character_dna_lock: Record<string, CharacterSceneDNA>;
+  environment: SceneEnvironment;
+  camera: SceneCamera;
+  story: SceneStory;
+  audio: SceneAudio;
+  strict_continuity_instruction: string;
+  negative_prompt: string;
+  image_url?: string | null;
+  image_source?: string | null;
+  image_error?: string;
 }
 
 export interface ViralHook {

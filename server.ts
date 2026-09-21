@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { GoogleGenAI, Type } from '@google/genai';
+import OpenAI from 'openai';
 import { createServer as createViteServer } from 'vite';
 
 dotenv.config();
@@ -37,13 +38,83 @@ function getAIClient(): GoogleGenAI {
   return aiClient;
 }
 
+// Lazy OpenAI initialization
+let openaiClient: OpenAI | null = null;
+function getOpenAIClient(): OpenAI {
+  if (!openaiClient) {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      console.warn('Warning: OPENAI_API_KEY is not set. DALL-E image generation will use Pollinations fallback.');
+    }
+    openaiClient = new OpenAI({ apiKey: apiKey || 'missing' });
+  }
+  return openaiClient;
+}
+
+// ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// DALL-E 3 Image Generation — satu-satunya sumber gambar
+// ─────────────────────────────────────────────────────────────
+async function generateImageWithDallE(
+  prompt: string,
+  aspectRatio: string = '1:1',
+  quality: 'standard' | 'hd' = 'standard'
+): Promise<{ url: string; source: 'dalle3' }> {
+  const openaiKey = process.env.OPENAI_API_KEY;
+  if (!openaiKey) throw new Error('OPENAI_API_KEY tidak ditemukan.');
+
+  // Map aspect ratio ke ukuran DALL-E 3 yang didukung
+  let dalleSize: '1024x1024' | '1792x1024' | '1024x1792' = '1024x1024';
+  if (aspectRatio === '16:9') dalleSize = '1792x1024';
+  else if (aspectRatio === '9:16') dalleSize = '1024x1792';
+
+  const openai = getOpenAIClient();
+  // DALL-E 3 bekerja lebih baik dengan prompt Inggris, maks 4000 karakter
+  const cleanPrompt = prompt.slice(0, 3900);
+  const response = await openai.images.generate({
+    model: 'dall-e-3',
+    prompt: cleanPrompt,
+    n: 1,
+    size: dalleSize,
+    quality,
+    response_format: 'url',
+  });
+  const imageUrl = response.data?.[0]?.url;
+  if (!imageUrl) throw new Error('DALL-E 3 tidak mengembalikan URL gambar.');
+  return { url: imageUrl, source: 'dalle3' };
+}
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    hasApiKey: Boolean(process.env.GEMINI_API_KEY),
+    hasGeminiKey: Boolean(process.env.GEMINI_API_KEY),
+    hasOpenAIKey: Boolean(process.env.OPENAI_API_KEY),
     timestamp: new Date().toISOString(),
   });
+});
+
+// ─────────────────────────────────────────────────────────────
+// ENDPOINT: Generate Image On-Demand (DALL-E 3 / Pollinations)
+// ─────────────────────────────────────────────────────────────
+app.post('/api/generate-image', async (req, res) => {
+  try {
+    const { prompt, aspectRatio = '1:1', quality = 'standard', style } = req.body;
+    if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
+      return res.status(400).json({ error: 'Prompt gambar tidak boleh kosong.' });
+    }
+
+    // Build a rich prompt with style if provided
+    const fullPrompt = style
+      ? `${style}, ${prompt.trim()}, masterpiece, best quality, highly detailed, vibrant colors`
+      : `${prompt.trim()}, masterpiece, best quality, highly detailed`;
+
+    const result = await generateImageWithDallE(fullPrompt, aspectRatio, quality as 'standard' | 'hd');
+    res.json({ image_url: result.url, source: result.source });
+  } catch (error: any) {
+    console.error('Error in /api/generate-image:', error);
+    res.status(500).json({ error: error?.message || 'Gagal membuat gambar.' });
+  }
 });
 
 async function generateWithFallback(ai: GoogleGenAI, params: any) {
@@ -266,21 +337,13 @@ app.post('/api/generate-flow-prompts', async (req, res) => {
         `  Scene ${i + 1} (adegan ${scene.no}): Title="${scene.judul}" | Description="${scene.deskripsi}" | Emotion="${scene.emosi}" | Key Action="${scene.aksi_kunci}"`
       ).join('\n');
       outlineMappingRules = `
-
 ═══════════════════════════════════════════════════════════
 ⚠️  MANDATORY STORY OUTLINE — YOU MUST FOLLOW THIS EXACTLY
 ═══════════════════════════════════════════════════════════
-The user has already created this story outline in Stage 2. Your ONLY job in flowAiPrompts is to EXPAND each scene below into full storyboard prompts. DO NOT invent a different story. DO NOT skip or merge scenes.
+The user has already created this story outline in Stage 2. Your ONLY job in flowAiPrompts is to EXPAND each scene below into full, highly detailed storyboard prompts. DO NOT invent a different story. DO NOT skip or merge scenes.
 
 Per-Scene Mapping (STRICTLY follow this order):
 ${mappingLines}
-
-For EACH scene above, apply these rules:
-- "judul" field: use the scene Title above
-- "alur" field: expand the Description into 3-5 time-stamped action steps
-- "dialog" field: derive spoken lines directly from the Key Action
-- "audio" field: choose music/sound that fits the Emotion tag
-- "prompt" field: craft a descriptive prompt that visually depicts the Description + Emotion
 
 The story title, summary, and overall narrative MUST match:
 - Story Title: "${storyOutline.judul}"
@@ -292,8 +355,8 @@ The story title, summary, and overall narrative MUST match:
     // ── System instruction (mode-aware) ─────────────────────────────────────
     const hasOutline = Boolean(storyOutline && storyOutline.adegan);
     const missionStatement = hasOutline
-      ? `Your PRIMARY MISSION is to FAITHFULLY EXPAND the provided story outline into ${promptCount} fully-detailed storyboard scene prompts. You are a translator of story beats into visual prompts — NOT a creative writer inventing a new story.`
-      : `Your PRIMARY MISSION is to analyze the reference images (if any) and CREATE A BRAND NEW compelling storyboard with ${promptCount} scenes.`;
+      ? `Your PRIMARY MISSION is to FAITHFULLY EXPAND the provided story outline into ${promptCount} fully-detailed, continuous storyboard scene prompts. You are a world-class AI Storyboard Director.`
+      : `Your PRIMARY MISSION is to analyze the reference images (if any) and CREATE A BRAND NEW compelling storyboard with ${promptCount} highly detailed, continuous scenes.`;
 
     const systemInstruction = `You are a world-class AI Storyboard Director and Visual Prompt Engineer.
 ${missionStatement}
@@ -301,18 +364,19 @@ ${outlineMappingRules}
 
 STORYLINE CONTINUITY RULES (CRITICAL):
 - The scenes MUST form a single, continuous, and logical storyline.
-- Scene 1 must lead directly into Scene 2, Scene 2 into Scene 3, and so on. 
+- Scene 1 must lead directly into Scene 2, Scene 2 into Scene 3, and so on. The "ending_action" of one scene MUST be the starting point or directly lead to the "opening_shot" of the next.
 - Do not create disjointed, repetitive, or independent scenes. The storyline must progress forward seamlessly.
+- Strict continuity instruction: You MUST provide an explicit instruction linking the current scene to the next.
 
 CHARACTER DNA & CONSISTENCY (CRITICAL):
+- Character DNA must be explicitly locked PER SCENE. For every character in a scene, define their identity, appearance, clothing, body, and voice rules.
 - If reference images are provided, YOU MUST STRICTLY preserve the Character DNA (clothing, hair, facial features, accessories, colors).
-- DO NOT change character appearances or add random elements not present in the reference images.
-- Maintain absolute character consistency across EVERY scene in the storyboard. The character must look EXACTLY the same in all prompts.
+- Maintain absolute character consistency across EVERY scene. 
 
 VISUAL RULES:
 - If reference images are uploaded: extract art style, character DNA, color palette, shading technique.
 - Maintain strict visual consistency across all generated scenes.
-- ${isStandalone ? 'This is a STANDALONE video. Do NOT add any "Part X" label to titles or descriptions.' : `This generation is for "${partText}". All hooks, titles, and descriptions MUST explicitly mention or be themed around "${partText}".`}
+- ${isStandalone ? 'This is a STANDALONE video. Do NOT add any "Part X" label.' : `This generation is for "${partText}".`}
 
 Target specifications:
 - Platform: YouTube Shorts / TikTok / Reels (vertical fast-paced viral animation)
@@ -325,36 +389,28 @@ Target specifications:
 - Animation Style: ${style}
 
 Output Requirements:
-1. "storyTitle": Catchy, viral-worthy title. ${isStandalone ? 'No part label needed.' : `Must include "${partText}".`}
+1. "storyTitle": Catchy, viral-worthy title.
 2. "storySummary": 2-3 sentence overview of the story.
-3. "visualStyleGuide": Extremely detailed visual consistency guide (art style, color palette, shading, background, rendering keywords).
-4. "characterDNA": Array of characters with full_prompt_dna.
-5. "flowAiPrompts": Array of EXACTLY ${promptCount} scenes. For each:
-   - "part": ${parameters?.partNumber || 0}
-   - "judul": Scene heading/title
-   - "adegan": scene number (1-based)
-   - "durasi": "${durText}"
-   - "prompt": Masterfully crafted text-to-image prompt. MUST include: [Character DNA], [Action/pose], [Art style: ${style}], [Environment], [Camera Angle], [Lighting]. Scene 1 ONLY: prepend "HOOK VISUAL: ..."
-   - "latar": Setting description
-   - "alur": Array of { "waktu": string, "aksi": string } — 3-5 time-stamped action steps
-   - "dialog": Array of { "karakter": string, "waktu": string, "ucapan": string }
-   - "audio": Background music or sound effects
-   - "kamera": Camera movement or composition
-   - "aturan": Array of visual consistency rules
-6. "hooks": Array of 3 high-retention text hooks for 0-3 second window.
-7. "viralMetadata": viral_titles (5), viral_hashtags (10), youtube_description (formatted), supporting_hashtags, pinned_comment_suggestion.
+3. "visualStyleGuide": Extremely detailed visual consistency guide.
+4. "characterDNA": Global array of characters.
+5. "flowAiPrompts": Array of EXACTLY ${promptCount} highly detailed scenes. Each scene MUST follow the new advanced schema:
+   - "project", "scene", "duration", "continuity_priority", "reference_storyboard"
+   - "adegan" (integer scene number), "judul" (scene title), "prompt" (master text-to-image prompt)
+   - "character_dna_lock": A dictionary where keys are character names and values are their specific DNA lock for this scene (identity, appearance, clothing, body, voice).
+   - "environment": location, time, weather, visual_style, continuity.
+   - "camera": opening_shot, movement, framing, ending_position.
+   - "story": action, dialogue (array of {speaker, line}), ending_action.
+   - "audio": music, sound_effects, dialogue_rule.
+   - "strict_continuity_instruction": explicit instructions connecting this to the next scene.
+   - "negative_prompt": standard negative prompt to prevent text/watermarks.
+6. "hooks": Array of 3 high-retention text hooks.
+7. "viralMetadata": viral metadata for social media.
 
 LANGUAGE RULES (STRICT):
-- You MUST generate ALL text fields in the JSON in the requested language: ${requestedLanguageText}.
-- This includes "prompt", "full_prompt_dna", "judul", "latar", "alur.aksi", "dialog.ucapan", "aturan", "hooks", and ALL other fields. DO NOT output English unless English is the requested language.
-- youtube_description format:
-  Line 1: Hook sentence.
-  Line 2-3: Story synopsis.
-  Line 4: (empty)
-  Line 5: ${watchCta}
-  Line 6: ${subscribeCta}
-  Line 7: (empty)
-  Line 8: TAGS: [relevant tags]`;
+- You MUST generate ALL narrative text fields (including dialogues, actions, backgrounds) in the requested language: ${requestedLanguageText}. DO NOT output English unless English is requested.
+- "prompt" and "negative_prompt" SHOULD be in English for the AI image generator to understand best.
+- The dialogue lines must make sense, be engaging, and strictly follow the character's voice.
+- Ensure animal characters (if any) can speak if required by the story.`;
 
     const parts: any[] = [];
 
@@ -449,54 +505,70 @@ Generate the complete JSON now.`;
               items: {
                 type: Type.OBJECT,
                 properties: {
-                  part: { type: Type.INTEGER },
-                  judul: { type: Type.STRING },
+                  project: { type: Type.STRING },
+                  scene: { type: Type.STRING },
                   adegan: { type: Type.INTEGER },
-                  durasi: { type: Type.STRING },
+                  judul: { type: Type.STRING },
                   prompt: { type: Type.STRING },
-                  latar: { type: Type.STRING },
-                  alur: {
-                    type: Type.ARRAY,
-                    items: {
-                      type: Type.OBJECT,
-                      properties: {
-                        waktu: { type: Type.STRING },
-                        aksi: { type: Type.STRING },
+                  duration: { type: Type.STRING },
+                  continuity_priority: { type: Type.STRING },
+                  reference_storyboard: { type: Type.STRING },
+                  character_dna_lock: {
+                    type: Type.OBJECT,
+                    description: "Key is character name, value is DNA object",
+                    // We define it generically as an object, but give it a schema if needed. Since dictionary keys are arbitrary, we leave it as OBJECT.
+                  },
+                  environment: {
+                    type: Type.OBJECT,
+                    properties: {
+                      location: { type: Type.STRING },
+                      time: { type: Type.STRING },
+                      weather: { type: Type.STRING },
+                      visual_style: { type: Type.STRING },
+                      continuity: { type: Type.STRING },
+                    }
+                  },
+                  camera: {
+                    type: Type.OBJECT,
+                    properties: {
+                      opening_shot: { type: Type.STRING },
+                      movement: { type: Type.STRING },
+                      framing: { type: Type.STRING },
+                      ending_position: { type: Type.STRING },
+                    }
+                  },
+                  story: {
+                    type: Type.OBJECT,
+                    properties: {
+                      action: { type: Type.STRING },
+                      dialogue: {
+                        type: Type.ARRAY,
+                        items: {
+                          type: Type.OBJECT,
+                          properties: {
+                            speaker: { type: Type.STRING },
+                            line: { type: Type.STRING },
+                          }
+                        }
                       },
-                      required: ['waktu', 'aksi'],
-                    },
+                      ending_action: { type: Type.STRING },
+                    }
                   },
-                  dialog: {
-                    type: Type.ARRAY,
-                    items: {
-                      type: Type.OBJECT,
-                      properties: {
-                        karakter: { type: Type.STRING },
-                        waktu: { type: Type.STRING },
-                        ucapan: { type: Type.STRING },
-                      },
-                      required: ['karakter', 'waktu', 'ucapan'],
-                    },
+                  audio: {
+                    type: Type.OBJECT,
+                    properties: {
+                      music: { type: Type.STRING },
+                      sound_effects: { type: Type.STRING },
+                      dialogue_rule: { type: Type.STRING },
+                    }
                   },
-                  audio: { type: Type.STRING },
-                  kamera: { type: Type.STRING },
-                  aturan: {
-                    type: Type.ARRAY,
-                    items: { type: Type.STRING },
-                  },
+                  strict_continuity_instruction: { type: Type.STRING },
+                  negative_prompt: { type: Type.STRING },
                 },
                 required: [
-                  'part',
-                  'judul',
-                  'adegan',
-                  'durasi',
-                  'prompt',
-                  'latar',
-                  'alur',
-                  'dialog',
-                  'audio',
-                  'kamera',
-                  'aturan',
+                  'project', 'scene', 'adegan', 'judul', 'prompt', 'duration', 'continuity_priority',
+                  'reference_storyboard', 'character_dna_lock', 'environment', 'camera',
+                  'story', 'audio', 'strict_continuity_instruction', 'negative_prompt'
                 ],
               },
             },
@@ -569,28 +641,25 @@ Generate the complete JSON now.`;
 
     const parsedData = JSON.parse(textOutput);
     
-    // Inject image_url using Pollinations AI
+    // Inject image_url menggunakan DALL-E 3 (tanpa fallback Pollinations)
     if (parsedData.flowAiPrompts && Array.isArray(parsedData.flowAiPrompts)) {
-      parsedData.flowAiPrompts = parsedData.flowAiPrompts.map((scene: any) => {
-        // 1. Clean Prompt: Use strictly English keywords, forced animation style, and exclude Indonesian text
+      const imagePromises = parsedData.flowAiPrompts.map(async (scene: any) => {
+        // Build English-only prompt agar DALL-E 3 lebih akurat
         const imagePrompt = `${style}, ${scene.prompt}, ${parsedData.visualStyleGuide || ''}, masterpiece, best quality, hyper-detailed, highly aesthetic`;
-        
-        // 2. Negative Prompt to prevent bad generation
-        const negativePrompt = encodeURIComponent('text, watermark, ugly, bad anatomy, bad proportions, deformed, blurry, low resolution, extra limbs');
-        
-        let w = 1024, h = 1024;
-        if (aspectRatio === '9:16') { w = 576; h = 1024; }
-        else if (aspectRatio === '16:9') { w = 1024; h = 576; }
-        else if (aspectRatio === '4:5') { w = 819; h = 1024; }
-        
-        // Random seed to ensure unique images if prompts are similar
-        const seed = Math.floor(Math.random() * 9999999);
-        
-        // Add negative prompt to pollinations URL (undocumented feature but usually supported via query params)
-        // If pollinations doesn't strictly support `negative_prompt` param natively, it ignores it, but it helps when they pass it to flux/sd
-        scene.image_url = `https://image.pollinations.ai/prompt/${encodeURIComponent(imagePrompt)}?width=${w}&height=${h}&nologo=true&seed=${seed}`;
+        try {
+          const result = await generateImageWithDallE(imagePrompt, aspectRatio);
+          scene.image_url = result.url;
+          scene.image_source = 'dalle3';
+        } catch (imgErr: any) {
+          console.error(`DALL-E 3 gagal untuk scene ${scene.adegan}:`, imgErr?.message);
+          // Tidak ada fallback — lebih baik null daripada gambar yang tidak relevan
+          scene.image_url = null;
+          scene.image_source = null;
+          scene.image_error = imgErr?.message || 'DALL-E 3 gagal generate gambar';
+        }
         return scene;
       });
+      parsedData.flowAiPrompts = await Promise.all(imagePromises);
     }
 
     res.json(parsedData);
@@ -636,14 +705,12 @@ scene_number, scene_title, prompt, negative_prompt, duration_seconds, aspect_rat
     if (!text) throw new Error('No response from model');
     const updated = JSON.parse(text);
 
-    // Update image_url for refined scene
-    const imagePrompt = `${animationStyle}, ${updated.prompt}, ${updated.keyframe_visual_description}`;
-    let w = 1024, h = 1024;
-    if (updated.aspect_ratio === '9:16') { w = 576; h = 1024; }
-    else if (updated.aspect_ratio === '16:9') { w = 1024; h = 576; }
-    else if (updated.aspect_ratio === '4:5') { w = 819; h = 1024; }
-    const seed = Math.floor(Math.random() * 9999999);
-    updated.image_url = `https://image.pollinations.ai/prompt/${encodeURIComponent(imagePrompt)}?width=${w}&height=${h}&nologo=true&seed=${seed}`;
+    // Update image_url for refined scene using DALL-E 3
+    const imagePrompt = `${animationStyle}, ${updated.prompt}, ${updated.keyframe_visual_description || ''}, masterpiece, best quality`;
+    const refinedAspect = updated.aspect_ratio || '1:1';
+    const imgResult = await generateImageWithDallE(imagePrompt, refinedAspect);
+    updated.image_url = imgResult.url;
+    updated.image_source = imgResult.source;
 
     res.json(updated);
   } catch (error: any) {

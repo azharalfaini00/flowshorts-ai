@@ -1,4 +1,4 @@
-import { Sparkles, Video, Bookmark, HelpCircle, Film, LogOut, User } from 'lucide-react';
+import { Sparkles, Video, Bookmark, HelpCircle, Film, LogOut, User, Wand2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 
@@ -7,6 +7,7 @@ interface HeaderProps {
   savedCount: number;
   onOpenHelp: () => void;
   onLoadPreset: () => void;
+  onOpenImageGenerator: () => void;
 }
 
 export default function Header({
@@ -14,6 +15,7 @@ export default function Header({
   savedCount,
   onOpenHelp,
   onLoadPreset,
+  onOpenImageGenerator,
 }: HeaderProps) {
   const { user, status, signOut } = useAuth();
 
@@ -52,6 +54,17 @@ export default function Header({
               <span className="hidden sm:inline">Admin</span>
             </Link>
           )}
+
+          <button
+            type="button"
+            onClick={onOpenImageGenerator}
+            id="open-image-generator-btn"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-violet-300 bg-gradient-to-r from-violet-50 to-pink-50 px-3 py-1.5 text-xs font-semibold text-violet-700 shadow-xs hover:from-violet-100 hover:to-pink-100 dark:border-violet-800/60 dark:from-violet-950/40 dark:to-pink-950/40 dark:text-violet-300 dark:hover:from-violet-900/40 dark:hover:to-pink-900/40 transition-all"
+            title="Generate Gambar dengan DALL-E 3"
+          >
+            <Wand2 className="h-3.5 w-3.5 text-violet-500" />
+            <span className="hidden sm:inline">Generate Gambar</span>
+          </button>
 
           <button
             type="button"

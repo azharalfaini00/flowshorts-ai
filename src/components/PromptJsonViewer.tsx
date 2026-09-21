@@ -228,9 +228,9 @@ export default function PromptJsonViewer({
                       </span>
                       <div>
                         <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{scene.judul}</h4>
-                        <div className="flex gap-2 mt-0.5 text-[10px] text-zinc-500 dark:text-zinc-400">
-                          <span>⏱️ {scene.durasi}</span>
-                          {scene.latar && <span>📍 {scene.latar.slice(0, 40)}{scene.latar.length > 40 ? '…' : ''}</span>}
+                        <div className="flex flex-wrap gap-2 mt-0.5 text-[10px] text-zinc-500 dark:text-zinc-400">
+                          <span>⏱️ {scene.duration}</span>
+                          {scene.environment?.location && <span>📍 {scene.environment.location.slice(0, 40)}{scene.environment.location.length > 40 ? '…' : ''}</span>}
                         </div>
                       </div>
                     </div>
@@ -276,32 +276,49 @@ export default function PromptJsonViewer({
                         </div>
                       </div>
 
-                      {/* Alur */}
-                      {scene.alur && scene.alur.length > 0 && (
-                        <div>
-                          <span className="text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Alur Adegan</span>
-                          <div className="mt-1 space-y-1">
-                            {scene.alur.map((a, i) => (
-                              <div key={i} className="flex gap-2 rounded-lg bg-zinc-50 px-3 py-1.5 text-xs dark:bg-zinc-800">
-                                <span className="shrink-0 font-semibold text-rose-600 dark:text-rose-400">{a.waktu}</span>
-                                <span className="text-zinc-700 dark:text-zinc-300">{a.aksi}</span>
+                      {/* Story (Action & Dialogue) */}
+                      {scene.story && (
+                        <div className="space-y-3">
+                          {scene.story.action && (
+                            <div>
+                              <span className="text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Action & Alur</span>
+                              <div className="mt-1 rounded-lg bg-zinc-50 p-3 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                                {scene.story.action}
                               </div>
-                            ))}
-                          </div>
+                            </div>
+                          )}
+
+                          {scene.story.dialogue && scene.story.dialogue.length > 0 && (
+                            <div>
+                              <span className="text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Dialog</span>
+                              <div className="mt-1 space-y-1.5">
+                                {scene.story.dialogue.map((d, i) => (
+                                  <div key={i} className="flex gap-2 rounded-lg bg-indigo-50/60 px-3 py-2 text-xs dark:bg-indigo-950/30">
+                                    <span className="shrink-0 font-semibold text-indigo-700 dark:text-indigo-300">{d.speaker}:</span>
+                                    <span className="italic text-zinc-700 dark:text-zinc-300">"{d.line}"</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {scene.story.ending_action && (
+                            <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300">
+                              <span className="font-bold">Next:</span> {scene.story.ending_action}
+                            </div>
+                          )}
                         </div>
                       )}
 
-                      {/* Dialog */}
-                      {scene.dialog && scene.dialog.length > 0 && (
+                      {/* Environment */}
+                      {scene.environment && (
                         <div>
-                          <span className="text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Dialog</span>
-                          <div className="mt-1 space-y-1">
-                            {scene.dialog.map((d, i) => (
-                              <div key={i} className="flex gap-2 rounded-lg bg-indigo-50/60 px-3 py-1.5 text-xs dark:bg-indigo-950/30">
-                                <span className="shrink-0 font-semibold text-indigo-700 dark:text-indigo-300">{d.karakter} ({d.waktu}):</span>
-                                <span className="italic text-zinc-700 dark:text-zinc-300">"{d.ucapan}"</span>
-                              </div>
-                            ))}
+                          <span className="text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Environment & Atmosphere</span>
+                          <div className="mt-1 grid grid-cols-2 gap-2 text-xs">
+                            <div className="rounded-lg bg-zinc-50 px-3 py-1.5 dark:bg-zinc-800"><span className="font-semibold text-zinc-500 dark:text-zinc-400">Location:</span> {scene.environment.location}</div>
+                            <div className="rounded-lg bg-zinc-50 px-3 py-1.5 dark:bg-zinc-800"><span className="font-semibold text-zinc-500 dark:text-zinc-400">Time:</span> {scene.environment.time}</div>
+                            <div className="rounded-lg bg-zinc-50 px-3 py-1.5 dark:bg-zinc-800"><span className="font-semibold text-zinc-500 dark:text-zinc-400">Weather:</span> {scene.environment.weather}</div>
+                            <div className="rounded-lg bg-zinc-50 px-3 py-1.5 dark:bg-zinc-800"><span className="font-semibold text-zinc-500 dark:text-zinc-400">Style:</span> {scene.environment.visual_style}</div>
                           </div>
                         </div>
                       )}
@@ -310,30 +327,40 @@ export default function PromptJsonViewer({
                       <div className="grid grid-cols-2 gap-2 text-xs">
                         {scene.audio && (
                           <div className="rounded-lg bg-amber-50 px-3 py-2 dark:bg-amber-950/30">
-                            <p className="font-semibold text-amber-800 dark:text-amber-300">🎵 Audio</p>
-                            <p className="mt-0.5 text-zinc-700 dark:text-zinc-300">{scene.audio}</p>
+                            <p className="font-semibold text-amber-800 dark:text-amber-300">🎵 Audio & SFX</p>
+                            <p className="mt-1 text-zinc-700 dark:text-zinc-300">Music: {scene.audio.music}</p>
+                            <p className="mt-0.5 text-zinc-700 dark:text-zinc-300">SFX: {scene.audio.sound_effects}</p>
                           </div>
                         )}
-                        {scene.kamera && (
+                        {scene.camera && (
                           <div className="rounded-lg bg-sky-50 px-3 py-2 dark:bg-sky-950/30">
                             <p className="font-semibold text-sky-800 dark:text-sky-300">🎥 Kamera</p>
-                            <p className="mt-0.5 text-zinc-700 dark:text-zinc-300">{scene.kamera}</p>
+                            <p className="mt-1 text-zinc-700 dark:text-zinc-300">Start: {scene.camera.opening_shot}</p>
+                            <p className="mt-0.5 text-zinc-700 dark:text-zinc-300">Move: {scene.camera.movement}</p>
                           </div>
                         )}
                       </div>
 
-                      {/* Aturan */}
-                      {scene.aturan && scene.aturan.length > 0 && (
+                      {/* Character DNA Lock */}
+                      {scene.character_dna_lock && Object.keys(scene.character_dna_lock).length > 0 && (
                         <div>
-                          <span className="text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Aturan Konsistensi</span>
-                          <ul className="mt-1 space-y-0.5">
-                            {scene.aturan.map((r, i) => (
-                              <li key={i} className="flex items-start gap-1.5 text-xs text-zinc-600 dark:text-zinc-400">
-                                <span className="mt-0.5 shrink-0 text-emerald-500">✓</span>
-                                {r}
-                              </li>
+                          <span className="text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Character DNA Lock (Strict)</span>
+                          <div className="mt-1 space-y-1.5">
+                            {Object.entries(scene.character_dna_lock).map(([charName, dna]: [string, any]) => (
+                              <div key={charName} className="rounded-lg border border-rose-100 bg-rose-50/50 p-2 text-xs dark:border-rose-900/30 dark:bg-rose-950/20">
+                                <span className="font-bold text-rose-700 dark:text-rose-400">{charName}</span>
+                                <span className="ml-2 text-zinc-600 dark:text-zinc-400">{dna.appearance} | {dna.clothing}</span>
+                              </div>
                             ))}
-                          </ul>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Strict Continuity */}
+                      {scene.strict_continuity_instruction && (
+                        <div className="flex items-start gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300">
+                          <span className="mt-0.5 shrink-0">🔗</span>
+                          <span><strong>Continuity:</strong> {scene.strict_continuity_instruction}</span>
                         </div>
                       )}
 

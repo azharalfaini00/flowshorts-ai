@@ -8,6 +8,7 @@ import ViralHookStudio from './components/ViralHookStudio';
 import ViralSocialKit from './components/ViralSocialKit';
 import SavedProjectsDrawer from './components/SavedProjectsDrawer';
 import HelpModal from './components/HelpModal';
+import ImageGeneratorModal from './components/ImageGeneratorModal';
 import {
   StoryboardProject,
   FlowAiVideoParams,
@@ -50,6 +51,7 @@ export default function App() {
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [isSavedDrawerOpen, setIsSavedDrawerOpen] = useState<boolean>(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState<boolean>(false);
+  const [isImageGeneratorOpen, setIsImageGeneratorOpen] = useState<boolean>(false);
 
   // Load saved projects from localStorage on mount
   useEffect(() => {
@@ -281,6 +283,7 @@ export default function App() {
         savedCount={savedProjects.length}
         onOpenHelp={() => setIsHelpModalOpen(true)}
         onLoadPreset={handleLoadPreset}
+        onOpenImageGenerator={() => setIsImageGeneratorOpen(true)}
       />
 
       {/* Main Container */}
@@ -421,6 +424,12 @@ export default function App() {
       <HelpModal
         isOpen={isHelpModalOpen}
         onClose={() => setIsHelpModalOpen(false)}
+      />
+
+      {/* Image Generator Modal (DALL-E 3) */}
+      <ImageGeneratorModal
+        isOpen={isImageGeneratorOpen}
+        onClose={() => setIsImageGeneratorOpen(false)}
       />
     </div>
   );
