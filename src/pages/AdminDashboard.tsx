@@ -146,13 +146,13 @@ export default function AdminDashboard() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="w-full text-left text-sm whitespace-nowrap sm:whitespace-normal">
               <thead className="bg-zinc-50 text-zinc-500 dark:bg-zinc-950 dark:text-zinc-400">
                 <tr>
-                  <th className="px-6 py-4 font-semibold">Email</th>
-                  <th className="px-6 py-4 font-semibold">Status</th>
-                  <th className="px-6 py-4 font-semibold">Tanggal Daftar</th>
-                  <th className="px-6 py-4 font-semibold text-right">Aksi</th>
+                  <th className="px-4 py-3 sm:px-6 sm:py-4 font-semibold">Email</th>
+                  <th className="px-4 py-3 sm:px-6 sm:py-4 font-semibold">Status</th>
+                  <th className="px-4 py-3 sm:px-6 sm:py-4 font-semibold">Tanggal Daftar</th>
+                  <th className="px-4 py-3 sm:px-6 sm:py-4 font-semibold text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
@@ -167,8 +167,10 @@ export default function AdminDashboard() {
                 ) : (
                   filteredUsers.map((u) => (
                     <tr key={u.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
-                      <td className="px-6 py-4 font-medium">{u.email}</td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-3 sm:px-6 sm:py-4 font-medium text-zinc-900 dark:text-zinc-100 max-w-[150px] sm:max-w-none truncate sm:whitespace-normal" title={u.email}>
+                        {u.email}
+                      </td>
+                      <td className="px-4 py-3 sm:px-6 sm:py-4">
                         <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold
                           ${u.status === 'admin' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400' : ''}
                           ${u.status === 'approved' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : ''}
@@ -179,12 +181,12 @@ export default function AdminDashboard() {
                           <span className="capitalize">{u.status}</span>
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-zinc-500 dark:text-zinc-400">
+                      <td className="px-4 py-3 sm:px-6 sm:py-4 text-zinc-500 dark:text-zinc-400">
                         {new Date(u.created_at).toLocaleDateString('id-ID', {
-                          day: 'numeric', month: 'long', year: 'numeric'
+                          day: 'numeric', month: 'short', year: 'numeric'
                         })}
                       </td>
-                      <td className="px-6 py-4 text-right flex justify-end gap-2">
+                      <td className="px-4 py-3 sm:px-6 sm:py-4 text-right flex justify-end gap-1.5 sm:gap-2">
                         {u.status === 'pending' && (
                           <button
                             onClick={() => handleApprove(u.id)}
