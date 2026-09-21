@@ -48,7 +48,7 @@ async function generateImageWithDallE(
 }
 
 async function generateWithFallback(ai: GoogleGenAI, params: any) {
-  const models = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.0-pro'];
+  const models = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.5-flash'];
   let lastError: any = null;
   for (const model of models) {
     try {
