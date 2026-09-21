@@ -71,6 +71,7 @@ ATURAN PENTING:
 - Adegan terakhir harus punya ending yang memuaskan atau cliffhanger yang membuat penonton ingin terus menonton.
 - Gunakan bahasa Indonesia yang santai dan ekspresif.
 - Genre yang diminta: ${genre}.
+- ANTI-COPYRIGHT: DILARANG KERAS menggunakan nama karakter berhak cipta (misal: "Spider-Man", "Mickey Mouse"). Jika ide/referensi mengandung karakter berhak cipta, ganti namanya menjadi karakter generik (misal: "manusia laba-laba", "pahlawan super merah biru") agar tidak diblokir oleh filter keamanan AI.
 ${referenceImages.length > 0 ? '- WAJIB perhatikan gambar yang diunggah pengguna. Gunakan karakter, objek, atau situasi dalam gambar tersebut sebagai inspirasi utama alur cerita.' : ''}`;
 
     const parts: any[] = [];

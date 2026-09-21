@@ -191,7 +191,12 @@ LANGUAGE RULES (STRICT):
 - You MUST generate ALL narrative text fields (including dialogues, actions, backgrounds) in the requested language: ${requestedLanguageText}. DO NOT output English unless English is requested.
 - "prompt" and "negative_prompt" SHOULD be in English for the AI image generator to understand best.
 - The dialogue lines must make sense, be engaging, and strictly follow the character's voice.
-- Ensure animal characters (if any) can speak if required by the story.`;
+- Ensure animal characters (if any) can speak if required by the story.
+
+ANTI-COPYRIGHT & SAFETY RULES (CRITICAL):
+- DO NOT USE ANY trademarked names, copyrighted characters, or celebrity names (e.g., "Spider-Man", "Batman", "Iron Man", "Mickey Mouse", "Tom Cruise").
+- If the user or outline asks for a copyrighted character, you MUST silently rename it to a generic equivalent (e.g., "superhero in a red and blue webbed suit", "bat-themed vigilante", "heroic adventurer").
+- NEVER output trademarked names in any field (including "prompt", "judul", "character_dna", "dialogue"). Use generic descriptions only! Google's safety filters will reject the video generation if you use copyrighted names.`;
 
     const parts: any[] = [];
 
