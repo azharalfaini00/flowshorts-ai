@@ -25,23 +25,25 @@ async function generateImageWithDallE(
   const openaiKey = process.env.OPENAI_API_KEY;
   if (!openaiKey) throw new Error('OPENAI_API_KEY tidak ditemukan.');
 
-  // Map aspect ratio ke ukuran DALL-E 3 yang didukung
-  let dalleSize: '1024x1024' | '1792x1024' | '1024x1792' = '1024x1024';
-  if (aspectRatio === '16:9') dalleSize = '1792x1024';
-  else if (aspectRatio === '9:16') dalleSize = '1024x1792';
+  let imgSize: '1024x1024' | '1024x1536' | '1536x1024' = '1024x1024';
+  if (aspectRatio === '16:9') imgSize = '1536x1024';
+  else if (aspectRatio === '9:16') imgSize = '1024x1536';
+
+  const imgQuality = quality === 'hd' ? 'high' : 'medium';
 
   const openai = getOpenAIClient();
-  // DALL-E 3 bekerja lebih baik dengan prompt Inggris, maks 4000 karakter
   const cleanPrompt = prompt.slice(0, 3900);
   const response = await openai.images.generate({
-    model: 'dall-e-3',
+    model: 'gpt-image-1',
     prompt: cleanPrompt,
     n: 1,
-    size: dalleSize,
-    quality,
+    size: imgSize,
+    quality: imgQuality as any,
   });
-  const imageUrl = response.data?.[0]?.url;
-  if (!imageUrl) throw new Error('DALL-E 3 tidak mengembalikan URL gambar.');
+  const b64 = response.data?.[0]?.b64_json;
+  const urlResult = response.data?.[0]?.url;
+  if (!b64 && !urlResult) throw new Error('OpenAI tidak mengembalikan gambar.');
+  const imageUrl = urlResult || `data:image/png;base64,${b64}`;
   return { url: imageUrl, source: 'dalle3' };
 }
 
