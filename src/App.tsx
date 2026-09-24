@@ -61,6 +61,7 @@ Ketentuan yang wajib dipenuhi:
   // Input states
   const [customPrompt, setCustomPrompt] = useState<string>(defaultPromptText);
   const [referenceImages, setReferenceImages] = useState<ReferenceImageItem[]>([]);
+  const [aiProvider, setAiProvider] = useState<'gemini' | 'openai' | 'groq'>('groq');
 
   // Active Project & History states
   const [currentProject, setCurrentProject] = useState<StoryboardProject | null>(INITIAL_PRESET_PROJECT);
@@ -121,6 +122,7 @@ Ketentuan yang wajib dipenuhi:
     try {
       const payload = {
         customPrompt,
+        provider: aiProvider,
         referenceImages: referenceImages.map((img) => ({
           mimeType: img.mimeType,
           base64: img.base64,
@@ -376,6 +378,8 @@ Ketentuan yang wajib dipenuhi:
             isGenerating={isGenerating}
             onGenerate={handleGenerate}
             canGenerate={canGenerate}
+            aiProvider={aiProvider}
+            setAiProvider={setAiProvider}
           />
 
           {/* Results Section */}

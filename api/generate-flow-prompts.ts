@@ -2,14 +2,27 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, Type } from '@google/genai';
 import OpenAI from 'openai';
 
-export const maxDuration = 60; // Set Vercel timeout limit to 60 seconds (Hobby plan maximum)
-
 function getGroqClient(): OpenAI {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) throw new Error('GROQ_API_KEY is missing.');
   return new OpenAI({
     apiKey,
     baseURL: 'https://api.groq.com/openai/v1',
+  });
+}
+
+function getOpenAIClient(): OpenAI {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error('OPENAI_API_KEY is missing.');
+  return new OpenAI({ apiKey });
+}
+
+function getGeminiClient(): GoogleGenAI {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY is missing.');
+  return new GoogleGenAI({
+    apiKey,
+    httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
   });
 }
 
@@ -25,25 +38,21 @@ function isRetryableError(err: any): boolean {
   );
 }
 
+export const maxDuration = 60;
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const apiKey = process.env.GROQ_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({
-        error: 'GROQ_API_KEY is missing. Silakan tambahkan API key Groq di Settings > Secrets untuk menggunakan Groq Llama.',
-      });
-    }
-
     const {
       customPrompt,
       referenceImages, // array of { mimeType: string, base64: string }
+      provider = 'groq',
     } = req.body;
 
-    const groq = getGroqClient();
+    const hasImages = Array.isArray(referenceImages) && referenceImages.length > 0;
 
     const systemInstruction = `You are a world-class AI Storyboard Director and Visual Prompt Engineer.
 Your task is to analyze the provided storyboard reference images and the user's explicit instructions, then output the master JSON.
@@ -76,7 +85,7 @@ Ensure all parts of the JSON schema are filled out, including flowAiPrompts, hoo
     const userMessageContent: any[] = [{ type: 'text', text: userPromptText }];
 
     // Multimodal reference images if uploaded
-    if (Array.isArray(referenceImages) && referenceImages.length > 0) {
+    if (hasImages) {
       for (const img of referenceImages) {
         if (img.base64) {
           const mimeType = img.mimeType || 'image/jpeg';
@@ -91,25 +100,68 @@ Ensure all parts of the JSON schema are filled out, including flowAiPrompts, hoo
       }
     }
 
-    const hasImages = Array.isArray(referenceImages) && referenceImages.length > 0;
-    
-    // Gunakan Llama 3.2 11B Vision jika ada gambar, jika tidak pakai Llama 3.3 70B atau 3.1 70B
-    const model = hasImages ? 'llama-3.2-11b-vision-instruct' : 'llama-3.3-70b-versatile';
+    let textOutput: string | undefined = '';
 
-    const response = await groq.chat.completions.create({
-      model,
-      messages: [
-        { role: 'system', content: systemInstruction },
-        { role: 'user', content: userMessageContent }
-      ],
-      response_format: { type: 'json_object' },
-      max_tokens: 8000,
-      temperature: 0.7,
-    });
+    if (provider === 'gemini') {
+      const ai = getGeminiClient();
+      const parts: any[] = [{ text: userPromptText }];
+      if (hasImages) {
+        for (const img of referenceImages) {
+          if (img.base64) {
+            parts.push({
+              inlineData: {
+                mimeType: img.mimeType || 'image/jpeg',
+                data: img.base64.replace(/^data:image\/[a-zA-Z+]+;base64,/, ''),
+              },
+            });
+          }
+        }
+      }
+      
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.6-flash',
+        contents: { parts },
+        config: {
+          systemInstruction,
+          responseMimeType: 'application/json',
+          temperature: 0.7,
+        }
+      });
+      textOutput = response.text;
+    } else if (provider === 'openai') {
+      const openai = getOpenAIClient();
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemInstruction },
+          { role: 'user', content: userMessageContent }
+        ],
+        response_format: { type: 'json_object' },
+        max_tokens: 8000,
+        temperature: 0.7,
+      });
+      textOutput = response.choices[0].message?.content || undefined;
+    } else {
+      // Default to Groq
+      const groq = getGroqClient();
+      // Gunakan Llama 3.2 11B Vision jika ada gambar, jika tidak pakai Llama 3.3 70B atau 3.1 70B
+      const model = hasImages ? 'llama-3.2-11b-vision-preview' : 'llama-3.3-70b-versatile';
 
-    const textOutput = response.choices[0].message?.content;
+      const response = await groq.chat.completions.create({
+        model,
+        messages: [
+          { role: 'system', content: systemInstruction },
+          { role: 'user', content: userMessageContent }
+        ],
+        response_format: { type: 'json_object' },
+        max_tokens: 8000,
+        temperature: 0.7,
+      });
+      textOutput = response.choices[0].message?.content || undefined;
+    }
+
     if (!textOutput) {
-      throw new Error('Tidak ada output teks yang diterima dari Groq API.');
+      throw new Error(`Tidak ada output teks yang diterima dari API (${provider}).`);
     }
 
     const parsedData = JSON.parse(textOutput);
