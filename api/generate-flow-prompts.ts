@@ -2,6 +2,8 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, Type } from '@google/genai';
 import OpenAI from 'openai';
 
+export const maxDuration = 60; // Set Vercel timeout limit to 60 seconds (Hobby plan maximum)
+
 function getAIClient(): GoogleGenAI {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY is missing.');
