@@ -94,7 +94,7 @@ Ensure all parts of the JSON schema are filled out, including flowAiPrompts, hoo
     const hasImages = Array.isArray(referenceImages) && referenceImages.length > 0;
     
     // Gunakan Llama 3.2 11B Vision jika ada gambar, jika tidak pakai Llama 3.3 70B atau 3.1 70B
-    const model = hasImages ? 'llama-3.2-11b-vision-preview' : 'llama-3.3-70b-versatile';
+    const model = hasImages ? 'llama-3.2-11b-vision-instruct' : 'llama-3.3-70b-versatile';
 
     const response = await groq.chat.completions.create({
       model,
