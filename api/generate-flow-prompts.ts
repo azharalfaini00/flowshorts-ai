@@ -4,10 +4,13 @@ import OpenAI from 'openai';
 
 export const maxDuration = 60; // Set Vercel timeout limit to 60 seconds (Hobby plan maximum)
 
-function getOpenAIClient(): OpenAI {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error('OPENAI_API_KEY is missing.');
-  return new OpenAI({ apiKey });
+function getGroqClient(): OpenAI {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) throw new Error('GROQ_API_KEY is missing.');
+  return new OpenAI({
+    apiKey,
+    baseURL: 'https://api.groq.com/openai/v1',
+  });
 }
 
 function isRetryableError(err: any): boolean {
@@ -28,10 +31,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
       return res.status(500).json({
-        error: 'OPENAI_API_KEY is missing. Silakan tambahkan API key OpenAI di Settings > Secrets untuk beralih menggunakan GPT-4o-mini.',
+        error: 'GROQ_API_KEY is missing. Silakan tambahkan API key Groq di Settings > Secrets untuk menggunakan Groq Llama.',
       });
     }
 
@@ -40,7 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       referenceImages, // array of { mimeType: string, base64: string }
     } = req.body;
 
-    const openai = getOpenAIClient();
+    const groq = getGroqClient();
 
     const systemInstruction = `You are a world-class AI Storyboard Director and Visual Prompt Engineer.
 Your task is to analyze the provided storyboard reference images and the user's explicit instructions, then output the master JSON.
@@ -88,8 +91,13 @@ Ensure all parts of the JSON schema are filled out, including flowAiPrompts, hoo
       }
     }
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+    const hasImages = Array.isArray(referenceImages) && referenceImages.length > 0;
+    
+    // Gunakan Llama 3.2 Vision jika ada gambar, jika tidak pakai Llama 3.3 70B atau 3.1 70B
+    const model = hasImages ? 'llama-3.2-90b-vision-preview' : 'llama-3.3-70b-versatile';
+
+    const response = await groq.chat.completions.create({
+      model,
       messages: [
         { role: 'system', content: systemInstruction },
         { role: 'user', content: userMessageContent }
@@ -101,7 +109,7 @@ Ensure all parts of the JSON schema are filled out, including flowAiPrompts, hoo
 
     const textOutput = response.choices[0].message?.content;
     if (!textOutput) {
-      throw new Error('Tidak ada output teks yang diterima dari OpenAI API.');
+      throw new Error('Tidak ada output teks yang diterima dari Groq API.');
     }
 
     const parsedData = JSON.parse(textOutput);
