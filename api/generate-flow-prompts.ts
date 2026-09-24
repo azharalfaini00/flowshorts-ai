@@ -144,15 +144,17 @@ Ensure all parts of the JSON schema are filled out, including flowAiPrompts, hoo
     } else {
       // Default to Groq
       const groq = getGroqClient();
-      // Gunakan Llama 3.2 11B Vision jika ada gambar, jika tidak pakai Llama 3.3 70B atau 3.1 70B
-      const model = hasImages ? 'llama-3.2-11b-vision-preview' : 'llama-3.3-70b-versatile';
+      const model = 'llama-3.3-70b-versatile'; // Model aktif untuk text & JSON output
+
+      // Groq text models do not support image_url, so we must send text only
+      const textOnlyMessages = [
+        { role: 'system', content: systemInstruction },
+        { role: 'user', content: userPromptText }
+      ];
 
       const response = await groq.chat.completions.create({
         model,
-        messages: [
-          { role: 'system', content: systemInstruction },
-          { role: 'user', content: userMessageContent }
-        ],
+        messages: textOnlyMessages as any,
         response_format: { type: 'json_object' },
         max_tokens: 8000,
         temperature: 0.7,
@@ -164,7 +166,28 @@ Ensure all parts of the JSON schema are filled out, including flowAiPrompts, hoo
       throw new Error(`Tidak ada output teks yang diterima dari API (${provider}).`);
     }
 
-    const parsedData = JSON.parse(textOutput);
+    // Clean up potential markdown formatting just in case
+    let cleanText = textOutput.trim();
+    if (cleanText.startsWith('```json')) {
+      cleanText = cleanText.substring(7);
+    } else if (cleanText.startsWith('```')) {
+      cleanText = cleanText.substring(3);
+    }
+    if (cleanText.endsWith('```')) {
+      cleanText = cleanText.slice(0, -3);
+    }
+    cleanText = cleanText.trim();
+
+    let parsedData;
+    try {
+      parsedData = JSON.parse(cleanText);
+    } catch (parseError) {
+      console.error('Failed to parse JSON output from AI:', textOutput);
+      return res.status(500).json({
+        error: 'AI mengembalikan format yang tidak valid (bukan JSON murni). Silakan klik Generate ulang.',
+      });
+    }
+
     res.json(parsedData);
   } catch (error: any) {
     console.error('Error in /api/generate-flow-prompts:', error);
