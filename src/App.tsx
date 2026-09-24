@@ -116,12 +116,18 @@ export default function App() {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || `Server error: ${res.status}`);
+      // Safely parse — server may return plain text on fatal/timeout errors
+      const rawText = await res.text();
+      let data: any = null;
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        throw new Error(rawText || `Server error: ${res.status}`);
       }
 
-      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || data?.message || `Server error: ${res.status}`);
+      }
 
       const newProject: StoryboardProject = {
         id: `project-${Date.now()}`,

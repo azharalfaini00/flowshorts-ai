@@ -78,7 +78,19 @@ export default function StoryPlanner({ storyOutline, setStoryOutline, sceneCount
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const data = await res.json();
+
+      // Safely parse response — server may return plain text on fatal errors
+      let data: any = null;
+      const rawText = await res.text();
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        // Not JSON — use raw text as error message
+        const retryable = res.status === 503 || res.status === 429;
+        setIsRetryable(retryable);
+        throw new Error(rawText || `Server error: ${res.status}`);
+      }
+
       if (!res.ok) {
         const msg: string = data?.error || data?.message || `Error ${res.status}`;
         const retryable = res.status === 503 || res.status === 429;
