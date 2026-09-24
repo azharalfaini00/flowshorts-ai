@@ -51,14 +51,16 @@ export default function StoryPlanner({ storyOutline, setStoryOutline, sceneCount
   const [genre, setGenre] = useState('Komedi Dramatis');
   const [isGeneratingStory, setIsGeneratingStory] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [isRetryable, setIsRetryable] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editDraft, setEditDraft] = useState<StoryScene | null>(null);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(0);
 
   const handleGenerateStory = async () => {
-    if (!premise.trim()) return;
+    if (!premise.trim() && referenceImages.length === 0) return;
     setIsGeneratingStory(true);
     setErrorMsg('');
+    setIsRetryable(false);
     try {
       const payload = { 
         premise: premise.trim(), 
@@ -77,7 +79,16 @@ export default function StoryPlanner({ storyOutline, setStoryOutline, sceneCount
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Gagal membuat alur cerita.');
+      if (!res.ok) {
+        const msg: string = data?.error || data?.message || `Error ${res.status}`;
+        const retryable = res.status === 503 || res.status === 429;
+        setIsRetryable(retryable);
+        throw new Error(
+          retryable
+            ? 'Server AI sedang sibuk. Silakan klik "Coba Lagi" dalam beberapa saat.'
+            : msg
+        );
+      }
       setStoryOutline(data);
       setExpandedIndex(0);
     } catch (err: any) {
@@ -216,7 +227,17 @@ export default function StoryPlanner({ storyOutline, setStoryOutline, sceneCount
 
         {errorMsg && (
           <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-400">
-            ⚠️ {errorMsg}
+            <p className="font-semibold">⚠️ {errorMsg}</p>
+            {isRetryable && (
+              <button
+                type="button"
+                onClick={handleGenerateStory}
+                disabled={isGeneratingStory}
+                className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-200 disabled:opacity-50 dark:bg-red-900/40 dark:text-red-300 dark:hover:bg-red-900/60"
+              >
+                🔄 Coba Lagi
+              </button>
+            )}
           </div>
         )}
       </div>

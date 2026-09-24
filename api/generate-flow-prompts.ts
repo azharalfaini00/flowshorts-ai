@@ -47,17 +47,52 @@ async function generateImageWithDallE(
   return { url: imageUrl, source: 'dalle3' };
 }
 
+function isRetryableError(err: any): boolean {
+  const msg = String(err?.message || err || '').toLowerCase();
+  const code = err?.status || err?.code || 0;
+  return (
+    code === 503 ||
+    code === 429 ||
+    msg.includes('unavailable') ||
+    msg.includes('overloaded') ||
+    msg.includes('high demand') ||
+    msg.includes('resource_exhausted') ||
+    msg.includes('too many requests') ||
+    msg.includes('try again')
+  );
+}
+
 async function generateWithFallback(ai: GoogleGenAI, params: any) {
-  const models = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
+  // Use valid, stable Gemini model identifiers in priority order
+  const models = [
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-lite',
+    'gemini-1.5-flash',
+    'gemini-1.5-flash-8b',
+  ];
   let lastError: any = null;
+
   for (const model of models) {
-    try {
-      const response = await ai.models.generateContent({ ...params, model });
-      if (response && response.text) return response;
-    } catch (err: any) {
-      console.warn(`Model ${model} failed:`, err?.message || err);
-      lastError = err;
-      await new Promise((resolve) => setTimeout(resolve, 1200));
+    const maxRetries = 2;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await ai.models.generateContent({ ...params, model });
+        if (response && response.text) return response;
+        // Empty response — try next model immediately
+        break;
+      } catch (err: any) {
+        console.warn(`Model ${model} attempt ${attempt + 1} failed:`, err?.message || err);
+        lastError = err;
+        if (isRetryableError(err) && attempt < maxRetries) {
+          // Exponential backoff: 2s, 4s
+          const delay = 2000 * Math.pow(2, attempt);
+          console.log(`Retrying ${model} in ${delay}ms...`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        } else {
+          // Non-retryable or exhausted retries — move to next model
+          break;
+        }
+      }
     }
   }
   throw lastError;
@@ -452,8 +487,15 @@ Generate the complete JSON now.`;
     res.json(parsedData);
   } catch (error: any) {
     console.error('Error in /api/generate-flow-prompts:', error);
-    res.status(500).json({
-      error: error?.message || 'Terjadi kesalahan saat membuat storyboard & prompt Flow AI.',
-    });
+    const errMsg: string = error?.message || 'Terjadi kesalahan saat membuat storyboard & prompt Flow AI.';
+    const is503 =
+      errMsg.toLowerCase().includes('unavailable') ||
+      errMsg.toLowerCase().includes('high demand') ||
+      errMsg.toLowerCase().includes('overloaded') ||
+      errMsg.includes('503');
+    const friendlyMsg = is503
+      ? 'Server AI sedang sibuk (high demand). Semua model sudah dicoba. Silakan coba lagi dalam 30-60 detik.'
+      : errMsg;
+    res.status(is503 ? 503 : 500).json({ error: friendlyMsg });
   }
 }
