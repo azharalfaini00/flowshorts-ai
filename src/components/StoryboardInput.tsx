@@ -5,16 +5,13 @@ import { ReferenceImageItem } from '../types';
 interface StoryboardInputProps {
   premise: string;
   setPremise: (val: string) => void;
-  animationStyle: string;
-  setAnimationStyle: (val: string) => void;
+
   referenceImages: ReferenceImageItem[];
   setReferenceImages: React.Dispatch<React.SetStateAction<ReferenceImageItem[]>>;
   isGenerating: boolean;
 }
 
 export default function StoryboardInput({
-  animationStyle,
-  setAnimationStyle,
   referenceImages,
   setReferenceImages,
   isGenerating,
@@ -94,25 +91,7 @@ export default function StoryboardInput({
 
 
 
-      {/* Animation Style Dropdown */}
-      <div className="mb-5">
-        <label className="mb-2 block text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-          Gaya Animasi (Art Style)
-        </label>
-        <select
-          disabled={isGenerating}
-          value={animationStyle || 'Modern Anime Aesthetic'}
-          onChange={(e) => setAnimationStyle(e.target.value)}
-          className="w-full appearance-none rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-900 focus:border-rose-500 focus:bg-white focus:ring-1 focus:ring-rose-500 focus:outline-hidden disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-        >
-          <option value="Modern Anime Aesthetic (Studio Ghibli / Makoto Shinkai style)">2D Anime (Studio Ghibli / Makoto Shinkai)</option>
-          <option value="3D Pixar/Disney Animation Style">3D Animasi (Pixar / Disney)</option>
-          <option value="Cartoon Network Comic Style, vibrant colors">Kartun 2D (Comic Style)</option>
-          <option value="Cinematic Realistic, hyper-detailed, Unreal Engine 5">Cinematic Realistis (Unreal Engine 5)</option>
-          <option value="Flat Vector Illustration, minimal corporate style">Flat Vector (Minimalis)</option>
-          <option value="Claymation / Stop Motion Animation">Stop Motion / Claymation</option>
-        </select>
-      </div>
+
 
       {/* Dropzone */}
       <div

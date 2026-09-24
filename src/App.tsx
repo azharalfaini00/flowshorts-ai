@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import Header from './components/Header';
 import StoryboardInput from './components/StoryboardInput';
-import StoryPlanner from './components/StoryPlanner';
-import FlowAiParameters from './components/FlowAiParameters';
+import CustomPromptInput from './components/CustomPromptInput';
 import PromptJsonViewer from './components/PromptJsonViewer';
 import ViralHookStudio from './components/ViralHookStudio';
 import ViralSocialKit from './components/ViralSocialKit';
@@ -16,7 +15,6 @@ import {
   ScenePrompt,
   ViralHook,
   ViralMetadata,
-  StoryOutline,
 } from './types';
 import { INITIAL_PRESET_PROJECT } from './utils/sampleData';
 import { AlertCircle, Film, Sparkles, CheckCircle2 } from 'lucide-react';
@@ -24,21 +22,45 @@ import { AlertCircle, Film, Sparkles, CheckCircle2 } from 'lucide-react';
 const LOCAL_STORAGE_KEY = 'flowshorts_ai_saved_projects';
 
 export default function App() {
+  // Default user custom prompt
+  const defaultPromptText = `Buatkan prompt JSON Part 1 untuk saya generate ke Google Flow AI.
+
+Buatkan prompt yang masuk akal dan dialog yang masuk akal agar ceritanya tetap nyambung dari awal sampai akhir.
+
+Ketentuan yang wajib dipenuhi:
+1. Semua dialog harus masuk akal, natural, dan tetap menggunakan Bahasa Indonesia. Tidak boleh mencampurkan bahasa lain.
+2. DNA karakter harus 100% sama seperti di storyboard. Tidak boleh ada perubahan apa pun dari karakter, termasuk wajah, bentuk tubuh, pakaian, warna pakaian, aksesori, hewan, bentuk atau ciri fisik hewan, maupun elemen karakter lainnya.
+3. Buat agar hewan juga bisa berdialog. Dialog hewan harus masuk akal, natural, dan sesuai dengan karakter serta alur cerita.
+4. Buat Hook 5 detik di awal yang menarik dan membuat banyak orang ingin terus menonton.
+5. Prompt harus dibagi menjadi 3 prompt JSON terpisah agar memudahkan untuk disalin:
+   * Prompt 1 berdurasi 10 detik.
+   * Prompt 2 berdurasi 10 detik.
+   * Prompt 3 berdurasi 10 detik.
+   * Total durasi 30 detik.
+6. Tidak boleh ada tulisan apa pun di dalam video. Jangan menampilkan teks, subtitle, judul, caption, watermark, atau tulisan dalam bentuk apa pun.
+7. Perintahkan Google Flow AI agar cerita tetap nyambung dari Scene 1 ke scene selanjutnya.
+8. Pastikan kesinambungan visual antar-scene tetap terjaga, mulai dari angle shot kamera, posisi karakter, gerakan karakter, ekspresi, lingkungan, pencahayaan, suasana, hingga elemen visual lainnya.
+9. Percakapan terakhir di Scene 1 harus nyambung langsung dengan percakapan di Scene 2.
+10. Percakapan terakhir di Scene 2 harus nyambung langsung dengan percakapan di Scene 3.
+11. Ketiga prompt harus terasa seperti satu cerita yang berkelanjutan, bukan tiga video yang terpisah.
+12. Ketika Budi yang berbicara, harus benar-benar Budi yang berbicara. Jangan sampai dialog Budi keluar dari mulut karakter lain.
+13. Ketika hewan atau karakter lain yang berbicara, pastikan dialog keluar dari karakter yang benar-benar sedang berbicara.
+14. Kunci suara setiap karakter agar tidak berubah-ubah dari satu scene ke scene berikutnya (Suara Budi harus selalu sama, Suara Kiko harus selalu sama). Jangan mengubah identitas suara, karakter suara, nada suara, gaya bicara, atau karakter vokal di setiap scene.
+15. Pastikan gerakan mulut dan lip-sync sesuai dengan karakter yang sedang berbicara.
+16. Jangan mengubah storyboard. Semua karakter, pakaian, hewan, lingkungan, properti, suasana, dan elemen cerita harus tetap mengikuti storyboard secara konsisten.
+17. Jika storyboard memiliki keterangan Part 1, maka buatkan prompt JSON untuk Part 1.
+18. Jika storyboard memiliki keterangan Part 2, maka buatkan prompt JSON untuk Part 2.
+19. Jika storyboard tidak memiliki keterangan atau pembagian Part, otomatis anggap storyboard tersebut sebagai satu Part dan langsung buatkan prompt JSON.
+20. Untuk setiap Part yang dibuat, otomatis bagi menjadi 3 PROMPT JSON terpisah, masing-masing berdurasi 10 detik, agar mudah disalin ke Google Flow AI.
+21. Jangan mengubah isi atau alur storyboard ketika membaginya menjadi 3 prompt. Pembagian hanya dilakukan berdasarkan kesinambungan cerita agar setiap scene tetap terasa natural.
+22. Setiap prompt harus memiliki kesinambungan dengan prompt sebelumnya dan prompt berikutnya (angle, posisi, ekspresi, lokasi, pencahayaan, dialog).
+23. Pastikan akhir Prompt 1 menjadi awal yang langsung terhubung dengan Prompt 2, dan akhir Prompt 2 menjadi awal yang langsung terhubung dengan Prompt 3.
+24. Output akhir wajib dalam format JSON dan otomatis dibagi menjadi 3 PROMPT JSON terpisah untuk setiap Part.
+25. Jangan mengubah atau menghilangkan ketentuan apa pun dari storyboard. Prioritaskan konsistensi DNA karakter, kesinambungan cerita, kesinambungan kamera, kesinambungan dialog, dan konsistensi suara karakter.`;
+
   // Input states
-  const [storyOutline, setStoryOutline] = useState<StoryOutline | null>(null);
-  const [animationStyle, setAnimationStyle] = useState<string>('Shonen Anime Action');
+  const [customPrompt, setCustomPrompt] = useState<string>(defaultPromptText);
   const [referenceImages, setReferenceImages] = useState<ReferenceImageItem[]>([]);
-  const [language, setLanguage] = useState<'id' | 'en'>('id');
-  const [parameters, setParameters] = useState<FlowAiVideoParams>({
-    duration: 5,
-    aspectRatio: '9:16',
-    resolution: '1080p',
-    promptCount: 4,
-    cameraMovement: 'Cinematic Pan & Dynamic Zoom-in',
-    lightingMood: 'Cinematic Volumetric & Golden Hour',
-    fps: '24fps Cinematic Animation',
-    partNumber: undefined,
-  });
 
   // Active Project & History states
   const [currentProject, setCurrentProject] = useState<StoryboardProject | null>(INITIAL_PRESET_PROJECT);
@@ -88,8 +110,8 @@ export default function App() {
 
   // Generate Storyboard & Google Flow AI Prompts
   const handleGenerate = async () => {
-    if (referenceImages.length === 0 && !storyOutline) {
-      setErrorMessage('Silakan buat alur cerita atau unggah gambar referensi terlebih dahulu.');
+    if (referenceImages.length === 0) {
+      setErrorMessage('Silakan unggah gambar storyboard referensi terlebih dahulu.');
       return;
     }
 
@@ -98,14 +120,11 @@ export default function App() {
 
     try {
       const payload = {
-        storyOutline,
-        animationStyle,
+        customPrompt,
         referenceImages: referenceImages.map((img) => ({
           mimeType: img.mimeType,
           base64: img.base64,
         })),
-        parameters,
-        language,
       };
 
       const res = await fetch('/api/generate-flow-prompts', {
@@ -132,12 +151,12 @@ export default function App() {
       const newProject: StoryboardProject = {
         id: `project-${Date.now()}`,
         createdAt: new Date().toISOString(),
-        title: data.storyTitle || storyOutline?.judul || 'Storyboard Google Flow AI Baru',
-        premise: storyOutline?.ringkasan || 'Referensi Visual Storyboard',
-        animationStyle,
-        mode: referenceImages.length > 0 ? 'reference' : 'new',
-        parameters: { ...parameters },
-        partNumber: parameters.partNumber ?? undefined,
+        title: data.storyTitle || 'Storyboard Google Flow AI Baru',
+        premise: 'Referensi Visual Storyboard',
+        animationStyle: 'Custom',
+        mode: 'reference',
+        parameters: { duration: 10, aspectRatio: '9:16', resolution: '1080p', promptCount: 3, cameraMovement: '', lightingMood: '', fps: '' },
+        partNumber: undefined,
         characterDNA: data.characterDNA || [],
         visualStyleGuide: data.visualStyleGuide || '',
         storySummary: data.storySummary || '',
@@ -191,7 +210,7 @@ export default function App() {
         body: JSON.stringify({
           currentPrompt,
           refinementInstruction: instruction,
-          animationStyle: currentProject.animationStyle,
+          animationStyle: 'Custom',
         }),
       });
 
@@ -227,20 +246,12 @@ export default function App() {
   // Load preset demo
   const handleLoadPreset = () => {
     setCurrentProject(INITIAL_PRESET_PROJECT);
-    setStoryOutline(null);
-    setAnimationStyle(INITIAL_PRESET_PROJECT.animationStyle);
-    setParameters({ ...INITIAL_PRESET_PROJECT.parameters });
-    showToast('Contoh preset animasi Shonen dimuat!');
+    showToast('Contoh preset animasi dimuat!');
   };
 
   // Select project from drawer
   const handleSelectProject = (proj: StoryboardProject) => {
     setCurrentProject(proj);
-    setStoryOutline(null);
-    setAnimationStyle(proj.animationStyle);
-    if (proj.parameters) {
-      setParameters({ ...proj.parameters });
-    }
     showToast(`Memuat proyek: ${proj.title}`);
   };
 
@@ -279,7 +290,7 @@ export default function App() {
     persistProjects(savedProjects.map((p) => (p.id === updated.id ? updated : p)));
   };
 
-  const canGenerate = referenceImages.length > 0 || Boolean(storyOutline);
+  const canGenerate = referenceImages.length > 0 && customPrompt.trim().length > 0;
 
   return (
     <div className="min-h-screen bg-zinc-100/70 text-zinc-900 selection:bg-rose-500/20 selection:text-rose-900 dark:bg-zinc-950 dark:text-zinc-100">
@@ -350,29 +361,18 @@ export default function App() {
           </div>
         )}
 
-        {/* Step 1: Reference Upload & Story Planning */}
+        {/* Step 1: Reference Upload */}
         <div className="space-y-6">
           <StoryboardInput
-            animationStyle={animationStyle}
-            setAnimationStyle={setAnimationStyle}
             referenceImages={referenceImages}
             setReferenceImages={setReferenceImages}
             isGenerating={isGenerating}
           />
-          <StoryPlanner
-            storyOutline={storyOutline}
-            setStoryOutline={setStoryOutline}
-            sceneCount={parameters.promptCount}
-            isGenerating={isGenerating}
-            referenceImages={referenceImages}
-            language={language}
-            setLanguage={setLanguage}
-          />
-
-          {/* Step 2: Flow AI Video Parameters */}
-          <FlowAiParameters
-            parameters={parameters}
-            setParameters={setParameters}
+          
+          {/* Step 2: Master Prompt Input */}
+          <CustomPromptInput
+            prompt={customPrompt}
+            setPrompt={setCustomPrompt}
             isGenerating={isGenerating}
             onGenerate={handleGenerate}
             canGenerate={canGenerate}

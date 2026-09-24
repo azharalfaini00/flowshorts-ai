@@ -62,6 +62,7 @@ export const INITIAL_PRESET_PROJECT: StoryboardProject = {
     lightingMood: 'Cinematic Volumetric & Golden Hour',
     fps: '24fps Cinematic Animation',
   },
+  characterDNA: [],
   visualStyleGuide: 'Japanese modern anime animation, high contrast dark charcoal and glowing violet spiritual aura, crisp line art, dynamic particle embers, floating celestial temple ruins with cherry blossom petals drifting.',
   storySummary: 'Kisah pembuka intens berdurasi 20 detik yang menangkap momen tegang prajurit samurai mengaktifkan kekuatan terlarang untuk menyelamatkan kuil langit.',
   flowAiPrompts: [
