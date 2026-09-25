@@ -94,17 +94,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 Your job is to read the uploaded storyboard images and the user's MASTER INSTRUCTION, then output a highly detailed JSON response.
 
 ====== CRITICAL RULE: OUTPUT STRUCTURE ======
-You MUST output exactly ONE valid JSON root object with this structure:
+You MUST output exactly ONE valid JSON root object. The order of keys MUST be EXACTLY as follows:
 
 {
-  "storyTitle": "...",
-  "storySummary": "...",
-  "visualStyleGuide": "...",
-  "characterDNA": [ ... ],
-  "flowAiPrompts": [ ... ],
-  "hooks": [ ... ],
-  "viralMetadata": { ... }
+  "storyTitle": "Catchy viral title in Bahasa Indonesia",
+  "storySummary": "2-3 sentence story overview in Bahasa Indonesia",
+  "visualStyleGuide": "Visual consistency guide: art style, lighting, colors",
+  "characterDNA": [ { "name": "Character Name", "appearance": "Full description" } ],
+  "hooks": [
+    {
+      "type": "visual",
+      "hook_text": "Hook dialog in Bahasa Indonesia",
+      "visual_cue": "Visual description in English",
+      "audio_cue": "Audio/music description in English"
+    }
+  ],
+  "viralMetadata": {
+    "viral_titles": ["Title option 1", "Title option 2", "Title option 3"],
+    "viral_hashtags": ["#hashtag1", "#hashtag2", "#hashtag3"],
+    "youtube_description": "Full YouTube description with CTA in Bahasa Indonesia",
+    "supporting_hashtags": [ { "category": "Category Name", "tags": ["#tag"] } ],
+    "pinned_comment_suggestion": "Pinned comment text in Bahasa Indonesia"
+  },
+  "flowAiPrompts": [
+    // PLACE ALL REQUESTED SCENE JSON OBJECTS HERE
+  ]
 }
+
+IMPORTANT: You MUST generate "hooks" and "viralMetadata" FIRST before "flowAiPrompts". Do not skip them.
 
 ====== CRITICAL RULE: flowAiPrompts CONTENT ======
 The elements inside the "flowAiPrompts" array MUST be the exact, fully-detailed JSON objects that the user requested in their MASTER INSTRUCTION.
@@ -116,30 +133,12 @@ IF the user's MASTER INSTRUCTION requests scenes with fields like:
   - "global_negative_constraints", "ending", "hook", etc.
 THEN EVERY ONE OF THOSE FIELDS MUST BE PRESENT AND FULLY FILLED OUT in each element of "flowAiPrompts".
 
-Example of a CORRECT scene element inside flowAiPrompts:
-{
-  "part": 1, "scene": 1, "duration": "10 detik",
-  "character_lock": { "Budi": "...", "Kiko": "..." },
-  "voice_lock": { "Budi": "...", "Kiko": "...", "voice_consistency": "..." },
-  "continuity_instruction": { "must_continue_directly": true, "instruction": "...", "camera_continuity": "...", "position_continuity": "...", "lighting_continuity": "..." },
-  "scene": { "setting": "...", "visual": "...", "camera": "...", "lighting": "...", "mood": "..." },
-  "dialogue": [ { "speaker": "Budi", "dialogue": "..." }, { "speaker": "Kiko", "dialogue": "..." } ],
-  "audio": { "music": "...", "sound_effects": "...", "lip_sync": "..." },
-  "global_negative_constraints": [ "...", "..." ]
-}
-
-IF the user requests 3 separate JSON prompts, each with the above rich structure, put all 3 as elements in "flowAiPrompts".
-
-====== CRITICAL RULE: hooks & viralMetadata ======
-You MUST automatically generate the following based on the story you just created:
-- "hooks": 2-3 viral hook ideas for 0-5 second retention (include hook_text, visual_cue, audio_cue)
-- "viralMetadata": viral titles, hashtags, YouTube description, pinned comment suggestion
-Do NOT leave these empty.
+IF the user requests 3 separate JSON prompts, put all 3 as elements in the "flowAiPrompts" array.
 
 ====== OUTPUT RULES ======
-1. All narrative content (dialog, action, story, hooks) MUST be in Bahasa Indonesia.
-2. Image generation prompts for Google Flow AI MUST be in English.
-3. Dialogues MUST be assigned to the CORRECT speaker. Never put Budi's words in Kiko's mouth or vice versa.
+1. All narrative content (dialog, action, story, hooks, titles, metadata) MUST be in Bahasa Indonesia.
+2. Image generation prompts for Google Flow AI inside scene objects MUST be in English.
+3. Dialogues MUST be assigned to the CORRECT speaker. Never mix up speakers.
 4. Never add any text, explanation, or markdown OUTSIDE the JSON.`;
 
     const parts: any[] = [];
