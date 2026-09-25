@@ -166,47 +166,65 @@ CRITICAL:
       });
     }
 
-    // ✅ Normalize for frontend: extract fields the UI needs from whatever schema AI returned
-    // Supports both old schema (storyTitle) and user-custom schemas (master_prompt, etc.)
-    const normalize = (data: any): any => {
-      // If user's master prompt uses master_prompt wrapper (common in default prompt)
-      if (data.master_prompt) {
-        const mp = data.master_prompt;
-        return {
-          storyTitle: mp.title || mp.storyTitle || data.storyTitle || 'Storyboard Baru',
-          storySummary: mp.concept || mp.story_summary || mp.storySummary || data.storySummary || '',
-          visualStyleGuide: typeof mp.visual_consistency === 'string' ? mp.visual_consistency : (JSON.stringify(mp.visual_consistency) || data.visualStyleGuide || ''),
-          characterDNA: Array.isArray(mp.characters) ? mp.characters : (Array.isArray(mp.characterDNA) ? mp.characterDNA : (Array.isArray(data.characterDNA) ? data.characterDNA : [])),
-          flowAiPrompts: Array.isArray(mp.scenes) ? mp.scenes : (Array.isArray(mp.flowAiPrompts) ? mp.flowAiPrompts : (Array.isArray(data.flowAiPrompts) ? data.flowAiPrompts : [])),
-          hooks: Array.isArray(mp.hooks) ? mp.hooks : (Array.isArray(data.hooks) ? data.hooks : []),
-          viralMetadata: {
-            viral_titles: Array.isArray(mp.viralMetadata?.viral_titles) ? mp.viralMetadata.viral_titles : (Array.isArray(data.viralMetadata?.viral_titles) ? data.viralMetadata.viral_titles : []),
-            viral_hashtags: Array.isArray(mp.viralMetadata?.viral_hashtags) ? mp.viralMetadata.viral_hashtags : (Array.isArray(data.viralMetadata?.viral_hashtags) ? data.viralMetadata.viral_hashtags : []),
-            youtube_description: mp.viralMetadata?.youtube_description || data.viralMetadata?.youtube_description || '',
-            supporting_hashtags: Array.isArray(mp.viralMetadata?.supporting_hashtags) ? mp.viralMetadata.supporting_hashtags : (Array.isArray(data.viralMetadata?.supporting_hashtags) ? data.viralMetadata.supporting_hashtags : []),
-            pinned_comment_suggestion: mp.viralMetadata?.pinned_comment_suggestion || data.viralMetadata?.pinned_comment_suggestion || '',
-          },
-          // Keep ALL original fields so PromptJsonViewer can show the full raw JSON
-          ...data,
-          master_prompt: undefined,
-        };
-      }
+    // ✅ Normalize for frontend: aggressively extract fields no matter the schema
+    const normalize = (rawData: any): any => {
+      // Flatten if wrapped in "master_prompt", "data", "result", etc.
+      let data = rawData;
+      if (data.master_prompt) data = { ...data, ...data.master_prompt };
+      if (data.data) data = { ...data, ...data.data };
 
-      // Already in expected format — just ensure safe arrays
+      // Helper to find the first array of objects that looks like scenes
+      const findScenesArray = (obj: any): any[] => {
+        if (Array.isArray(obj.flowAiPrompts)) return obj.flowAiPrompts;
+        if (Array.isArray(obj.scenes)) return obj.scenes;
+        if (Array.isArray(obj.adegan)) return obj.adegan;
+        if (Array.isArray(obj.prompts)) return obj.prompts;
+        if (Array.isArray(obj.storyboard)) return obj.storyboard;
+        // Search values
+        for (const key in obj) {
+          if (Array.isArray(obj[key]) && obj[key].length > 0 && typeof obj[key][0] === 'object') {
+            // check if it has scene-like keys
+            const first = obj[key][0];
+            if (first.prompt || first.scene || first.deskripsi || first.action || first.kamera) {
+              return obj[key];
+            }
+          }
+        }
+        return [];
+      };
+
+      const findHooksArray = (obj: any): any[] => {
+        if (Array.isArray(obj.hooks)) return obj.hooks;
+        if (Array.isArray(obj.viral_hooks)) return obj.viral_hooks;
+        if (Array.isArray(obj.hook_penahan)) return obj.hook_penahan;
+        for (const key in obj) {
+          if (Array.isArray(obj[key]) && obj[key].length > 0 && typeof obj[key][0] === 'object') {
+            if (obj[key][0].hook_text || obj[key][0].type || obj[key][0].visual_cue) return obj[key];
+          }
+        }
+        return [];
+      };
+
+      const flowAiPrompts = findScenesArray(data);
+      const hooks = findHooksArray(data);
+
+      const vm = data.viralMetadata || data.viral_metadata || data.metadata || {};
+
       return {
-        ...data,
-        storyTitle: data.storyTitle || data.title || 'Storyboard Baru',
-        storySummary: data.storySummary || data.story_summary || '',
-        visualStyleGuide: data.visualStyleGuide || '',
-        characterDNA: Array.isArray(data.characterDNA) ? data.characterDNA : [],
-        flowAiPrompts: Array.isArray(data.flowAiPrompts) ? data.flowAiPrompts : [],
-        hooks: Array.isArray(data.hooks) ? data.hooks : [],
+        ...rawData, // keep original raw data
+        storyTitle: data.storyTitle || data.title || data.judul || 'Storyboard Baru',
+        storySummary: data.storySummary || data.story_summary || data.ringkasan || '',
+        visualStyleGuide: typeof data.visualStyleGuide === 'string' ? data.visualStyleGuide : 
+                         (typeof data.visual_consistency === 'string' ? data.visual_consistency : JSON.stringify(data.visual_consistency || data.visualStyleGuide || '')),
+        characterDNA: Array.isArray(data.characterDNA) ? data.characterDNA : (Array.isArray(data.characters) ? data.characters : (Array.isArray(data.karakter) ? data.karakter : [])),
+        flowAiPrompts,
+        hooks,
         viralMetadata: {
-          viral_titles: Array.isArray(data.viralMetadata?.viral_titles) ? data.viralMetadata.viral_titles : [],
-          viral_hashtags: Array.isArray(data.viralMetadata?.viral_hashtags) ? data.viralMetadata.viral_hashtags : [],
-          youtube_description: data.viralMetadata?.youtube_description || '',
-          supporting_hashtags: Array.isArray(data.viralMetadata?.supporting_hashtags) ? data.viralMetadata.supporting_hashtags : [],
-          pinned_comment_suggestion: data.viralMetadata?.pinned_comment_suggestion || '',
+          viral_titles: Array.isArray(vm.viral_titles) ? vm.viral_titles : (Array.isArray(data.viral_titles) ? data.viral_titles : []),
+          viral_hashtags: Array.isArray(vm.viral_hashtags) ? vm.viral_hashtags : (Array.isArray(data.viral_hashtags) ? data.viral_hashtags : []),
+          youtube_description: vm.youtube_description || data.youtube_description || vm.deskripsi || '',
+          supporting_hashtags: Array.isArray(vm.supporting_hashtags) ? vm.supporting_hashtags : [],
+          pinned_comment_suggestion: vm.pinned_comment_suggestion || vm.pinned_comment || data.pinned_comment || '',
         },
       };
     };
