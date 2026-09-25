@@ -249,7 +249,7 @@ You MUST extract the content they asked for and map it STRICTLY into the root-le
     res.json(parsedData);
   } catch (error: any) {
     console.error('Error in /api/generate-flow-prompts:', error);
-    const errMsg: string = error?.message || 'Terjadi kesalahan saat membuat storyboard & prompt Flow AI.';
+    const errMsg: string = error?.message || String(error) || 'Terjadi kesalahan saat membuat storyboard & prompt Flow AI.';
     const is503 =
       errMsg.toLowerCase().includes('unavailable') ||
       errMsg.toLowerCase().includes('high demand') ||
@@ -258,6 +258,6 @@ You MUST extract the content they asked for and map it STRICTLY into the root-le
     const friendlyMsg = is503
       ? 'Server AI sedang sibuk (high demand). Semua model sudah dicoba. Silakan coba lagi dalam 30-60 detik.'
       : errMsg;
-    res.status(is503 ? 503 : 500).json({ error: friendlyMsg });
+    res.status(is503 ? 503 : 500).json({ error: friendlyMsg + ' | Detail Error Asli: ' + errMsg });
   }
 }
