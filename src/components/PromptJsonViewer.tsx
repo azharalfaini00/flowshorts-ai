@@ -6,12 +6,14 @@ interface PromptJsonViewerProps {
   project: StoryboardProject;
   onRefineScene?: (sceneIndex: number, instruction: string) => Promise<void>;
   isRefining?: boolean;
+  onUpdatePrompts?: (newPrompts: any[]) => void;
 }
 
 export default function PromptJsonViewer({
   project,
   onRefineScene,
   isRefining,
+  onUpdatePrompts,
 }: PromptJsonViewerProps) {
   const prompts = project.flowAiPrompts || [];
   const storyTitle = project.title || '';
@@ -22,6 +24,11 @@ export default function PromptJsonViewer({
   const [expandedIndex, setExpandedIndex] = useState<number | null>(0);
   const [refiningIndex, setRefiningIndex] = useState<number | null>(null);
   const [refineText, setRefineText] = useState('');
+  
+  // Manual edit state
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState<string>('');
+  const [jsonError, setJsonError] = useState<string | null>(null);
 
   // JSON is directly from AI, which now returns the new schema
   const cleanFlowAiJson = JSON.stringify(prompts, null, 2);
@@ -80,6 +87,33 @@ export default function PromptJsonViewer({
     await onRefineScene(index, refineText);
     setRefineText('');
     setRefiningIndex(null);
+  };
+
+  const handleEditClick = (idx: number, jsonString: string) => {
+    setEditingIndex(idx);
+    setEditValue(jsonString);
+    setJsonError(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingIndex(null);
+    setEditValue('');
+    setJsonError(null);
+  };
+
+  const handleSaveEdit = (idx: number) => {
+    try {
+      const parsed = JSON.parse(editValue);
+      if (onUpdatePrompts) {
+        const newPrompts = [...prompts];
+        newPrompts[idx] = parsed;
+        onUpdatePrompts(newPrompts);
+      }
+      setEditingIndex(null);
+      setJsonError(null);
+    } catch (err: any) {
+      setJsonError('Format JSON tidak valid: ' + err.message);
+    }
   };
 
   return (
@@ -423,23 +457,63 @@ export default function PromptJsonViewer({
               {prompts.map((scene, idx) => {
                 const sceneJson = JSON.stringify(scene, null, 2);
                 const isCopied = copiedIndex === idx;
+                const isEditing = editingIndex === idx;
                 
                 return (
                   <div key={idx} className="rounded-xl border border-zinc-200 bg-zinc-950 overflow-hidden dark:border-zinc-800">
                     <div className="flex items-center justify-between bg-zinc-900 px-4 py-2 border-b border-zinc-800">
-                      <span className="text-xs font-semibold text-zinc-300">Adegan {scene.adegan ?? idx + 1}: {scene.judul}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleCopyPrompt(sceneJson, idx)}
-                        className="flex items-center gap-1.5 rounded-lg bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-700 hover:text-white"
-                      >
-                        {isCopied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-                        <span>{isCopied ? 'Tersalin!' : 'Salin JSON Adegan'}</span>
-                      </button>
+                      <span className="text-xs font-semibold text-zinc-300">Adegan {scene.adegan ?? idx + 1}: {scene.judul || scene.title_internal || ''}</span>
+                      <div className="flex gap-2">
+                        {!isEditing && onUpdatePrompts && (
+                          <button
+                            type="button"
+                            onClick={() => handleEditClick(idx, sceneJson)}
+                            className="flex items-center gap-1.5 rounded-lg bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-700 hover:text-white"
+                          >
+                            <span>Edit Manual</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleCopyPrompt(sceneJson, idx)}
+                          className="flex items-center gap-1.5 rounded-lg bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-700 hover:text-white"
+                        >
+                          {isCopied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                          <span>{isCopied ? 'Tersalin!' : 'Salin JSON'}</span>
+                        </button>
+                      </div>
                     </div>
-                    <pre className="p-3 sm:p-4 font-mono text-[11px] sm:text-xs text-emerald-400 overflow-x-auto whitespace-pre">
-                      <code>{sceneJson}</code>
-                    </pre>
+                    {isEditing ? (
+                      <div className="p-3 bg-zinc-950">
+                        <textarea
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          className="w-full h-64 bg-zinc-900 text-emerald-400 font-mono text-[11px] sm:text-xs p-3 rounded-lg border border-zinc-700 focus:outline-none focus:border-rose-500 custom-scrollbar"
+                          spellCheck={false}
+                        />
+                        {jsonError && (
+                          <p className="mt-2 text-xs text-rose-500 font-semibold">{jsonError}</p>
+                        )}
+                        <div className="mt-3 flex justify-end gap-2">
+                          <button
+                            onClick={handleCancelEdit}
+                            className="px-3 py-1.5 text-xs font-medium text-zinc-400 hover:text-white transition-colors"
+                          >
+                            Batal
+                          </button>
+                          <button
+                            onClick={() => handleSaveEdit(idx)}
+                            className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-colors"
+                          >
+                            Simpan Perubahan
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <pre className="p-3 sm:p-4 font-mono text-[11px] sm:text-xs text-emerald-400 overflow-x-auto whitespace-pre custom-scrollbar">
+                        <code>{sceneJson}</code>
+                      </pre>
+                    )}
                   </div>
                 );
               })}

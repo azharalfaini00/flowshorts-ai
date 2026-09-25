@@ -289,6 +289,14 @@ Ketentuan yang wajib dipenuhi:
     persistProjects(savedProjects.map((p) => (p.id === updated.id ? updated : p)));
   };
 
+  // Update prompts (manual editing)
+  const updatePrompts = (newPrompts: any[]) => {
+    if (!currentProject) return;
+    const updated = { ...currentProject, flowAiPrompts: newPrompts };
+    setCurrentProject(updated);
+    persistProjects(savedProjects.map((p) => (p.id === updated.id ? updated : p)));
+  };
+
   // Update metadata
   const updateMetadata = (updater: (prev: ViralMetadata) => ViralMetadata) => {
     if (!currentProject) return;
@@ -396,6 +404,7 @@ Ketentuan yang wajib dipenuhi:
                 project={currentProject}
                 onRefineScene={handleRefineScene}
                 isRefining={isRefining}
+                onUpdatePrompts={updatePrompts}
               />
 
               {/* Step 4: Hook Penahan Penonton (0-3 Detik) */}
