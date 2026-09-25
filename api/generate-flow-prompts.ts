@@ -124,9 +124,9 @@ OUTPUT RULES:
 ${customPrompt}
 
 CRITICAL: 
-1. The images provided above are ONLY for visual reference (to understand character looks, art style, clothing, and colors). 
-2. Do NOT just describe the images. 
-3. You MUST generate the output STRICTLY based on the story, instructions, scene breakdown, and JSON format requested in the MASTER INSTRUCTION above.`;
+1. The images provided above act as your source material. You MUST read any text, dialogues, or story elements written inside the images. ALSO use them for visual reference (character looks, art style, clothing, colors).
+2. Do NOT just blindly describe the images. You must process them intelligently.
+3. You MUST format the final output STRICTLY based on the instructions, scene breakdowns (like "Part 1"), and JSON format requested in the MASTER INSTRUCTION above.`;
 
     parts.push({ text: userPromptText });
 
