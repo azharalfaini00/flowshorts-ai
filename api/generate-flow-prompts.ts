@@ -63,30 +63,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const systemInstruction = `You are a world-class AI Storyboard Director and Visual Prompt Engineer.
 Your task is to analyze the provided storyboard reference images and the user's explicit instructions, then output the master JSON.
 
-USER'S MASTER INSTRUCTION:
-${customPrompt}
+CRITICAL INSTRUCTION:
+No matter what JSON format or structure the user asks for in their prompt, YOU MUST output EXACTLY the following JSON schema at the root level. DO NOT wrap it in a parent key like "master_prompt".
 
-Output Requirements:
-You must strictly return a JSON object containing:
-1. "storyTitle": Catchy, viral-worthy title.
-2. "storySummary": 2-3 sentence overview of the story.
-3. "visualStyleGuide": Extremely detailed visual consistency guide.
-4. "characterDNA": Global array of characters.
-5. "flowAiPrompts": Array of highly detailed JSON prompts as requested by the user (e.g. 3 separate prompts of 10s each). Each prompt MUST follow this schema strictly.
-6. "hooks": Array of 3 high-retention text hooks.
-7. "viralMetadata": viral metadata for social media.
+{
+  "storyTitle": "Catchy, viral-worthy title.",
+  "storySummary": "2-3 sentence overview of the story.",
+  "visualStyleGuide": "Extremely detailed visual consistency guide.",
+  "characterDNA": [],
+  "flowAiPrompts": [
+    {
+      "scene_number": 1,
+      "prompt": "Highly detailed english prompt",
+      "camera_movement": "...",
+      "dialogue": "..."
+    }
+  ],
+  "hooks": [
+    { "type": "visual", "description": "hook1" }
+  ],
+  "viralMetadata": {
+    "viral_titles": [],
+    "viral_hashtags": [],
+    "youtube_description": "",
+    "supporting_hashtags": [],
+    "pinned_comment_suggestion": ""
+  }
+}
 
-All narrative text (dialogues, actions, background) MUST be in Indonesian as requested. "prompt" fields should be in English.
-Do NOT use copyrighted names.`;
+Narrative text (dialogues, actions, background) MUST be in Indonesian. "prompt" fields MUST be in English.`;
 
     const userPromptText = `STORYBOARD GENERATION REQUEST:
 
 You have been provided with ${referenceImages?.length || 0} reference storyboard image(s).
 
-YOUR INSTRUCTIONS:
+USER'S INSTRUCTIONS:
 ${customPrompt}
 
-Ensure all parts of the JSON schema are filled out, including flowAiPrompts, hooks, and viralMetadata.`;
+IMPORTANT RE-INSTRUCTION:
+IGNORE any conflicting JSON format (like {"master_prompt": {...}}) requested in the instructions above. 
+You MUST extract the content they asked for and map it STRICTLY into the root-level JSON schema provided in the System Instructions ("storyTitle", "flowAiPrompts", "hooks", "viralMetadata", etc). Do NOT return "master_prompt" key.`;
 
     const userMessageContent: any[] = [{ type: 'text', text: userPromptText }];
 
@@ -205,6 +221,24 @@ Ensure all parts of the JSON schema are filled out, including flowAiPrompts, hoo
     let parsedData;
     try {
       parsedData = JSON.parse(cleanText);
+      
+      // Fallback mapping in case LLM stubbornly ignores schema and wraps in "master_prompt"
+      if (parsedData.master_prompt) {
+        const mp = parsedData.master_prompt;
+        parsedData = {
+          ...parsedData,
+          storyTitle: mp.title || mp.storyTitle || parsedData.storyTitle || 'Storyboard Google Flow AI Baru',
+          storySummary: mp.concept || mp.story || mp.storySummary || parsedData.storySummary || '',
+          visualStyleGuide: (typeof mp.visual_consistency === 'string' ? mp.visual_consistency : JSON.stringify(mp.visual_consistency)) || parsedData.visualStyleGuide || '',
+          characterDNA: mp.characters || mp.characterDNA || parsedData.characterDNA || [],
+          flowAiPrompts: mp.scenes || mp.flowAiPrompts || parsedData.flowAiPrompts || [],
+          hooks: mp.hooks || parsedData.hooks || [],
+          viralMetadata: mp.viralMetadata || parsedData.viralMetadata || {
+            viral_titles: [], viral_hashtags: [], youtube_description: '', supporting_hashtags: [], pinned_comment_suggestion: ''
+          },
+        };
+        delete parsedData.master_prompt;
+      }
     } catch (parseError) {
       console.error('Failed to parse JSON output from AI:', textOutput);
       return res.status(500).json({
