@@ -218,6 +218,7 @@ Ketentuan yang wajib dipenuhi:
           currentPrompt,
           refinementInstruction: instruction,
           animationStyle: 'Custom',
+          apiKey: geminiApiKey,
         }),
       });
 
