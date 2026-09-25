@@ -38,10 +38,90 @@ function isRetryableError(err: any): boolean {
   return (
     code === 503 ||
     code === 429 ||
+    msg.includes('unavailable') ||
+    msg.includes('overloaded') ||
+    msg.includes('high demand') ||
+    msg.includes('resource_exhausted') ||
     msg.includes('rate limit') ||
     msg.includes('too many requests') ||
+    msg.includes('try again') ||
     msg.includes('timeout')
   );
+}
+
+async function generateWithGeminiFallback(ai: GoogleGenAI, params: any): Promise<string> {
+  // Ordered by stability: start with most reliable, end with newest/busiest
+  const models = [
+    'gemini-2.5-flash',
+    'gemini-flash-latest',
+    'gemini-3.1-flash-lite',
+    'gemini-3.5-flash',
+    'gemini-3.6-flash',
+    'gemini-3.8-flash',
+  ];
+  let lastError: any = null;
+
+  for (const model of models) {
+    const maxRetries = 3;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await ai.models.generateContent({ ...params, model });
+        if (response && response.text) return response.text;
+        break; // Empty response — try next model
+      } catch (err: any) {
+        console.warn(`[flow-prompts] Model ${model} attempt ${attempt + 1} failed:`, err?.message || err);
+        lastError = err;
+        if (isRetryableError(err) && attempt < maxRetries) {
+          const delay = 1000 * Math.pow(2, attempt); // 1s, 2s, 4s
+          console.log(`[flow-prompts] Retrying ${model} in ${delay}ms...`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        } else {
+          break; // Non-retryable or exhausted — next model
+        }
+      }
+    }
+  }
+  throw lastError;
+}
+
+async function generateWithGroqFallback(groq: OpenAI, messages: any[]): Promise<string> {
+  const models = [
+    'llama-3.3-70b-versatile',
+    'llama-3.1-8b-instant',
+    'llama3-70b-8192',
+    'llama3-8b-8192',
+    'mixtral-8x7b-32768'
+  ];
+  let lastError: any = null;
+
+  for (const model of models) {
+    const maxRetries = 3;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await groq.chat.completions.create({
+          model,
+          messages,
+          response_format: { type: 'json_object' },
+          max_tokens: 8000,
+          temperature: 0.7,
+        });
+        const content = response.choices[0]?.message?.content;
+        if (content) return content;
+        break; // Empty response, try next model
+      } catch (err: any) {
+        console.warn(`[flow-prompts] Groq model ${model} attempt ${attempt + 1} failed:`, err?.message || err);
+        lastError = err;
+        if (isRetryableError(err) && attempt < maxRetries) {
+          const delay = 1000 * Math.pow(2, attempt); // 1s, 2s, 4s
+          console.log(`[flow-prompts] Retrying Groq ${model} in ${delay}ms...`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        } else {
+          break; // Move to next model
+        }
+      }
+    }
+  }
+  throw lastError;
 }
 
 export const maxDuration = 60;
@@ -140,34 +220,14 @@ You MUST extract the content they asked for and map it STRICTLY into the root-le
         }
       }
       
-      let attempts = 0;
-      let lastErr: any;
-      while (attempts < 3) {
-        try {
-          const response = await ai.models.generateContent({
-            model: 'gemini-3.6-flash',
-            contents: { parts },
-            config: {
-              systemInstruction,
-              responseMimeType: 'application/json',
-              temperature: 0.7,
-            }
-          });
-          textOutput = response.text;
-          break; // Success, exit loop
-        } catch (err: any) {
-          lastErr = err;
-          attempts++;
-          const msg = err?.message?.toLowerCase() || '';
-          if (msg.includes('503') || msg.includes('overloaded') || msg.includes('429')) {
-            console.log(`Gemini overloaded/429. Retrying... attempt ${attempts}`);
-            await new Promise(resolve => setTimeout(resolve, 2000 * attempts));
-          } else {
-            break; // Not a retryable error
-          }
-        }
-      }
-      if (!textOutput && lastErr) throw lastErr;
+      textOutput = await generateWithGeminiFallback(ai, {
+        contents: { parts },
+        config: {
+          systemInstruction,
+          responseMimeType: 'application/json',
+          temperature: 0.7,
+        },
+      });
     } else if (provider === 'openai') {
       const openai = getOpenAIClient();
       const response = await openai.chat.completions.create({
@@ -184,22 +244,14 @@ You MUST extract the content they asked for and map it STRICTLY into the root-le
     } else {
       // Default to Groq
       const groq = getGroqClient();
-      const model = 'llama-3.3-70b-versatile'; // Model aktif untuk text & JSON output
-
+      
       // Groq text models do not support image_url, so we must send text only
       const textOnlyMessages = [
         { role: 'system', content: systemInstruction },
         { role: 'user', content: userPromptText }
       ];
 
-      const response = await groq.chat.completions.create({
-        model,
-        messages: textOnlyMessages as any,
-        response_format: { type: 'json_object' },
-        max_tokens: 8000,
-        temperature: 0.7,
-      });
-      textOutput = response.choices[0].message?.content || undefined;
+      textOutput = await generateWithGroqFallback(groq, textOnlyMessages);
     }
 
     if (!textOutput) {
