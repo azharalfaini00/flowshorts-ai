@@ -224,7 +224,6 @@ EXECUTION STEPS:
         // Search values
         for (const key in obj) {
           if (Array.isArray(obj[key]) && obj[key].length > 0 && typeof obj[key][0] === 'object') {
-            // check if it has scene-like keys
             const first = obj[key][0];
             if (first.prompt || first.scene || first.deskripsi || first.action || first.kamera) {
               return obj[key];
@@ -246,10 +245,34 @@ EXECUTION STEPS:
         return [];
       };
 
+      // Deep search for viralMetadata — check multiple possible locations
+      const findViralMetadata = (obj: any): any => {
+        // Direct match
+        if (obj.viralMetadata && typeof obj.viralMetadata === 'object') return obj.viralMetadata;
+        if (obj.viral_metadata && typeof obj.viral_metadata === 'object') return obj.viral_metadata;
+        // Sometimes AI nests it under a wrapper key
+        for (const key in obj) {
+          if (typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
+            const nested = obj[key];
+            if (
+              Array.isArray(nested.viral_titles) ||
+              Array.isArray(nested.viral_hashtags) ||
+              typeof nested.youtube_description === 'string'
+            ) {
+              return nested;
+            }
+          }
+        }
+        return {};
+      };
+
       const flowAiPrompts = findScenesArray(data);
       const hooks = findHooksArray(data);
+      const vm = findViralMetadata(data);
 
-      const vm = data.viralMetadata || data.viral_metadata || data.metadata || {};
+      console.log('[normalize] viralMetadata found:', JSON.stringify(vm).substring(0, 200));
+      console.log('[normalize] hooks found:', hooks.length, 'items');
+      console.log('[normalize] flowAiPrompts found:', flowAiPrompts.length, 'items');
 
       return {
         ...rawData, // keep original raw data
