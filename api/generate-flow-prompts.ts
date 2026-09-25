@@ -87,26 +87,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const hasImages = Array.isArray(referenceImages) && referenceImages.length > 0;
 
-    // ✅ System instruction: hanya bertugas memastikan output JSON valid
-    // TIDAK memaksa skema — biarkan user master prompt yang menentukan struktur
-    const systemInstruction = `You are an expert AI Video Director, Storyboard Artist, and Viral Content Strategist.
+    // ✅ System instruction: Kembalikan kepintaran struktur JSON seperti awal aplikasi,
+    // tapi tetap menghormati isi cerita dari master prompt.
+    const systemInstruction = `You are a world-class AI Video Director, Storyboard Artist, and Viral Content Strategist.
 
-Your job is to follow the USER'S INSTRUCTIONS precisely and completely.
+Your job is to read the images and the user's MASTER INSTRUCTION, and output a highly detailed JSON response.
+
+CRITICAL JSON SCHEMA REQUIREMENT:
+No matter what format the user requests in their prompt, you MUST output your final answer strictly in this root-level JSON structure. Place the scenes the user asked for inside the "flowAiPrompts" array:
+
+{
+  "storyTitle": "Catchy, viral-worthy title in Indonesian",
+  "storySummary": "2-3 sentence overview of the generated story",
+  "visualStyleGuide": "Detailed visual consistency guide (art style, lighting, colors)",
+  "characterDNA": [ { "name": "...", "appearance": "..." } ],
+  "flowAiPrompts": [ 
+    // 👉 THIS IS WHERE YOU PUT THE SCENES REQUESTED BY THE USER'S MASTER INSTRUCTION 👈
+  ],
+  "hooks": [
+    { "type": "visual", "hook_text": "...", "visual_cue": "...", "audio_cue": "..." }
+  ],
+  "viralMetadata": {
+    "viral_titles": ["title 1", "title 2"],
+    "viral_hashtags": ["#tag1", "#tag2"],
+    "youtube_description": "...",
+    "supporting_hashtags": [ { "category": "Trend", "tags": ["#x"] } ],
+    "pinned_comment_suggestion": "..."
+  }
+}
 
 OUTPUT RULES:
-1. You MUST follow every instruction in the user's prompt word-for-word.
-2. Output MUST be a valid JSON object.
-3. The JSON structure and fields are determined entirely by the user's instructions — do NOT override or change the user's requested format.
-4. If the user's prompt specifies a particular JSON schema (e.g. with specific field names, nesting, or structure), follow it EXACTLY.
-5. All narrative content (dialog, action, story) must be in Bahasa Indonesia unless the user says otherwise.
-6. All image/video generation prompts (for Google Flow AI) must be in English.
-7. Never add explanations, preamble, or markdown outside the JSON.`;
+1. "flowAiPrompts" MUST contain the exact scenes, story, and logic requested by the user's MASTER INSTRUCTION.
+2. You MUST automatically generate smart, viral "hooks" and "viralMetadata" based on the story you just created. Do not leave them empty.
+3. All narrative content (dialog, action, titles, hooks) must be in Bahasa Indonesia.
+4. All image generation prompts inside flowAiPrompts must be in English.
+5. Never add explanations outside the JSON.`;
 
     // Build parts: Images first, then the Master Prompt text so it has the highest priority (recency effect)
     const parts: any[] = [];
     
     if (hasImages) {
-      parts.push({ text: "VISUAL REFERENCES (Use these ONLY for character appearance, art style, and color consistency):" });
+      parts.push({ text: "VISUAL REFERENCES (The images below contain visual styles, characters, and potentially dialogues/text that you MUST read and use):" });
       for (const img of referenceImages) {
         if (img.base64) {
           parts.push({
@@ -123,10 +144,11 @@ OUTPUT RULES:
 --- MASTER INSTRUCTION ---
 ${customPrompt}
 
-CRITICAL: 
-1. The images provided above act as your source material. You MUST read any text, dialogues, or story elements written inside the images. ALSO use them for visual reference (character looks, art style, clothing, colors).
-2. Do NOT just blindly describe the images. You must process them intelligently.
-3. You MUST format the final output STRICTLY based on the instructions, scene breakdowns (like "Part 1"), and JSON format requested in the MASTER INSTRUCTION above.`;
+CRITICAL EXECUTION STEPS: 
+1. READ the images above. Extract any text, dialogues, character looks, and art style.
+2. READ this MASTER INSTRUCTION. 
+3. GENERATE the story and scenes exactly as requested in the MASTER INSTRUCTION, combining it with the data from the images.
+4. WRAP your entire response in the mandatory JSON schema provided in your system instructions, placing the generated scenes inside the "flowAiPrompts" array, and automatically generating the "hooks" and "viralMetadata" to make the content go viral.`;
 
     parts.push({ text: userPromptText });
 
