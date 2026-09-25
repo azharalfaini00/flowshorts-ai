@@ -61,7 +61,7 @@ Ketentuan yang wajib dipenuhi:
   // Input states
   const [customPrompt, setCustomPrompt] = useState<string>(defaultPromptText);
   const [referenceImages, setReferenceImages] = useState<ReferenceImageItem[]>([]);
-  const [aiProvider, setAiProvider] = useState<'gemini' | 'openai' | 'groq'>('groq');
+  const [geminiApiKey, setGeminiApiKey] = useState<string>(localStorage.getItem('gemini_api_key') || '');
 
   // Active Project & History states
   const [currentProject, setCurrentProject] = useState<StoryboardProject | null>(INITIAL_PRESET_PROJECT);
@@ -94,6 +94,11 @@ Ketentuan yang wajib dipenuhi:
     }
   }, []);
 
+  // Save API Key to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('gemini_api_key', geminiApiKey);
+  }, [geminiApiKey]);
+
   // Save projects helper
   const persistProjects = (projects: StoryboardProject[]) => {
     setSavedProjects(projects);
@@ -122,7 +127,7 @@ Ketentuan yang wajib dipenuhi:
     try {
       const payload = {
         customPrompt,
-        provider: aiProvider,
+        apiKey: geminiApiKey,
         referenceImages: referenceImages.map((img) => ({
           mimeType: img.mimeType,
           base64: img.base64,
@@ -378,8 +383,8 @@ Ketentuan yang wajib dipenuhi:
             isGenerating={isGenerating}
             onGenerate={handleGenerate}
             canGenerate={canGenerate}
-            aiProvider={aiProvider}
-            setAiProvider={setAiProvider}
+            geminiApiKey={geminiApiKey}
+            setGeminiApiKey={setGeminiApiKey}
           />
 
           {/* Results Section */}

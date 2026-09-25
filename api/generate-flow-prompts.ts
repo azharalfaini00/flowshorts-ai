@@ -1,31 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, Type } from '@google/genai';
-import OpenAI from 'openai';
 
-function getGroqClient(): OpenAI {
-  const envKeys = process.env.GROQ_API_KEY;
-  if (!envKeys) throw new Error('GROQ_API_KEY is missing.');
-  const keys = envKeys.split(',').map(k => k.trim()).filter(Boolean);
-  const apiKey = keys[Math.floor(Math.random() * keys.length)];
-  return new OpenAI({
-    apiKey,
-    baseURL: 'https://api.groq.com/openai/v1',
-  });
-}
-
-function getOpenAIClient(): OpenAI {
-  const envKeys = process.env.OPENAI_API_KEY;
-  if (!envKeys) throw new Error('OPENAI_API_KEY is missing.');
-  const keys = envKeys.split(',').map(k => k.trim()).filter(Boolean);
-  const apiKey = keys[Math.floor(Math.random() * keys.length)];
-  return new OpenAI({ apiKey });
-}
-
-function getGeminiClient(): GoogleGenAI {
-  const envKeys = process.env.GEMINI_API_KEY;
-  if (!envKeys) throw new Error('GEMINI_API_KEY is missing.');
-  const keys = envKeys.split(',').map(k => k.trim()).filter(Boolean);
-  const apiKey = keys[Math.floor(Math.random() * keys.length)];
+function getGeminiClient(apiKey: string): GoogleGenAI {
   return new GoogleGenAI({
     apiKey,
     httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
@@ -84,46 +60,6 @@ async function generateWithGeminiFallback(ai: GoogleGenAI, params: any): Promise
   throw lastError;
 }
 
-async function generateWithGroqFallback(groq: OpenAI, messages: any[]): Promise<string> {
-  const models = [
-    'llama-3.3-70b-versatile',
-    'llama-3.1-8b-instant',
-    'llama3-70b-8192',
-    'llama3-8b-8192',
-    'mixtral-8x7b-32768'
-  ];
-  let lastError: any = null;
-
-  for (const model of models) {
-    const maxRetries = 3;
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      try {
-        const response = await groq.chat.completions.create({
-          model,
-          messages,
-          response_format: { type: 'json_object' },
-          max_tokens: 8000,
-          temperature: 0.7,
-        });
-        const content = response.choices[0]?.message?.content;
-        if (content) return content;
-        break; // Empty response, try next model
-      } catch (err: any) {
-        console.warn(`[flow-prompts] Groq model ${model} attempt ${attempt + 1} failed:`, err?.message || err);
-        lastError = err;
-        if (isRetryableError(err) && attempt < maxRetries) {
-          const delay = 1000 * Math.pow(2, attempt); // 1s, 2s, 4s
-          console.log(`[flow-prompts] Retrying Groq ${model} in ${delay}ms...`);
-          await new Promise((resolve) => setTimeout(resolve, delay));
-        } else {
-          break; // Move to next model
-        }
-      }
-    }
-  }
-  throw lastError;
-}
-
 export const maxDuration = 60;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -135,8 +71,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const {
       customPrompt,
       referenceImages, // array of { mimeType: string, base64: string }
-      provider = 'groq',
+      apiKey,
     } = req.body;
+
+    if (!apiKey) {
+      return res.status(401).json({ error: 'API Key Gemini tidak ditemukan. Harap masukkan API Key Anda di halaman utama.' });
+    }
 
     const hasImages = Array.isArray(referenceImages) && referenceImages.length > 0;
 
@@ -204,58 +144,32 @@ You MUST extract the content they asked for and map it STRICTLY into the root-le
 
     let textOutput: string | undefined = '';
 
-    if (provider === 'gemini') {
-      const ai = getGeminiClient();
-      const parts: any[] = [{ text: userPromptText }];
-      if (hasImages) {
-        for (const img of referenceImages) {
-          if (img.base64) {
-            parts.push({
-              inlineData: {
-                mimeType: img.mimeType || 'image/jpeg',
-                data: img.base64.replace(/^data:image\/[a-zA-Z+]+;base64,/, ''),
-              },
-            });
-          }
+    const ai = getGeminiClient(apiKey);
+    const parts: any[] = [{ text: userPromptText }];
+    if (hasImages) {
+      for (const img of referenceImages) {
+        if (img.base64) {
+          parts.push({
+            inlineData: {
+              mimeType: img.mimeType || 'image/jpeg',
+              data: img.base64.replace(/^data:image\/[a-zA-Z+]+;base64,/, ''),
+            },
+          });
         }
       }
-      
-      textOutput = await generateWithGeminiFallback(ai, {
-        contents: { parts },
-        config: {
-          systemInstruction,
-          responseMimeType: 'application/json',
-          temperature: 0.7,
-        },
-      });
-    } else if (provider === 'openai') {
-      const openai = getOpenAIClient();
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemInstruction },
-          { role: 'user', content: userMessageContent }
-        ],
-        response_format: { type: 'json_object' },
-        max_tokens: 8000,
-        temperature: 0.7,
-      });
-      textOutput = response.choices[0].message?.content || undefined;
-    } else {
-      // Default to Groq
-      const groq = getGroqClient();
-      
-      // Groq text models do not support image_url, so we must send text only
-      const textOnlyMessages = [
-        { role: 'system', content: systemInstruction },
-        { role: 'user', content: userPromptText }
-      ];
-
-      textOutput = await generateWithGroqFallback(groq, textOnlyMessages);
     }
+    
+    textOutput = await generateWithGeminiFallback(ai, {
+      contents: { parts },
+      config: {
+        systemInstruction,
+        responseMimeType: 'application/json',
+        temperature: 0.7,
+      },
+    });
 
     if (!textOutput) {
-      throw new Error(`Tidak ada output teks yang diterima dari API (${provider}).`);
+      throw new Error(`Tidak ada output teks yang diterima dari Gemini API.`);
     }
 
     // Clean up potential markdown formatting just in case

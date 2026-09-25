@@ -7,8 +7,8 @@ interface CustomPromptInputProps {
   isGenerating: boolean;
   onGenerate: () => void;
   canGenerate: boolean;
-  aiProvider: 'gemini' | 'openai' | 'groq';
-  setAiProvider: (val: 'gemini' | 'openai' | 'groq') => void;
+  geminiApiKey: string;
+  setGeminiApiKey: (val: string) => void;
 }
 
 export default function CustomPromptInput({
@@ -17,8 +17,8 @@ export default function CustomPromptInput({
   isGenerating,
   onGenerate,
   canGenerate,
-  aiProvider,
-  setAiProvider,
+  geminiApiKey,
+  setGeminiApiKey,
 }: CustomPromptInputProps) {
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
@@ -33,19 +33,17 @@ export default function CustomPromptInput({
       </div>
 
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-        <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Pilih AI Engine:</label>
-        <select
-          value={aiProvider}
-          onChange={(e) => setAiProvider(e.target.value as 'gemini' | 'openai' | 'groq')}
+        <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Gemini API Key Anda:</label>
+        <input
+          type="password"
+          value={geminiApiKey}
+          onChange={(e) => setGeminiApiKey(e.target.value)}
           disabled={isGenerating}
-          className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-medium text-zinc-900 outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-        >
-          <option value="groq">Groq (Llama 3.3 70B & Vision)</option>
-          <option value="openai">OpenAI (GPT-4o-mini)</option>
-          <option value="gemini">Google (Gemini 3.6 Flash)</option>
-        </select>
+          placeholder="AIzaSy..."
+          className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-medium text-zinc-900 outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 flex-1 max-w-sm"
+        />
         <p className="text-[10px] text-zinc-500 dark:text-zinc-400 sm:ml-2">
-          (Pastikan API Key untuk AI yang dipilih sudah terpasang di Vercel Settings &gt; Secrets)
+          (Aman & tersimpan di browser Anda. <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-rose-500 hover:underline">Dapatkan Key Gratis di sini</a>)
         </p>
       </div>
 

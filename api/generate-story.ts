@@ -1,11 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, Type } from '@google/genai';
 
-function getAIClient(): GoogleGenAI {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY is missing.');
-  }
+function getAIClient(apiKey: string): GoogleGenAI {
   return new GoogleGenAI({
     apiKey,
     httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
@@ -71,17 +67,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const { premise, genre = 'Komedi Dramatis', sceneCount = 4, referenceImages = [], apiKey } = req.body;
+    
     if (!apiKey) {
-      return res.status(500).json({ error: 'GEMINI_API_KEY is missing.' });
+      return res.status(401).json({ error: 'API Key Gemini tidak ditemukan. Harap masukkan API Key Anda.' });
     }
-
-    const { premise, genre = 'Komedi Dramatis', sceneCount = 4, referenceImages = [] } = req.body;
+    
     if (!premise && (!referenceImages || referenceImages.length === 0)) {
       return res.status(400).json({ error: 'Premise/ide cerita atau referensi gambar wajib diisi.' });
     }
 
-    const ai = getAIClient();
+    const ai = getAIClient(apiKey);
 
     const systemInstruction = `Kamu adalah seorang penulis skenario viral profesional yang ahli membuat cerita pendek untuk YouTube Shorts, TikTok, dan Reels.
 Tugasmu adalah membuat ALUR CERITA (outline) yang sangat menarik, emosional, dan menghibur berdasarkan ${referenceImages.length > 0 ? 'gambar referensi dan ' : ''}ide yang diberikan pengguna.
