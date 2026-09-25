@@ -91,20 +91,11 @@ OUTPUT RULES:
 6. All image/video generation prompts (for Google Flow AI) must be in English.
 7. Never add explanations, preamble, or markdown outside the JSON.`;
 
-    // ✅ User prompt: master prompt dari user adalah PRIORITAS UTAMA
-    const userPromptText = `${customPrompt}
-
----
-CONTEXT: You have been provided with ${hasImages ? referenceImages.length : 0} reference storyboard image(s) above.
-Analyze the images carefully for: character appearance, visual style, art style, color palette, clothing, and scene composition.
-Use this visual information to enrich and make the output consistent with the reference images.
-BUT your primary obligation is to follow every instruction written above by the user, exactly as stated.`;
-
-    const ai = getGeminiClient(apiKey);
-
-    // Build parts: text first, then images
-    const parts: any[] = [{ text: userPromptText }];
+    // Build parts: Images first, then the Master Prompt text so it has the highest priority (recency effect)
+    const parts: any[] = [];
+    
     if (hasImages) {
+      parts.push({ text: "VISUAL REFERENCES (Use these ONLY for character appearance, art style, and color consistency):" });
       for (const img of referenceImages) {
         if (img.base64) {
           parts.push({
@@ -117,6 +108,18 @@ BUT your primary obligation is to follow every instruction written above by the 
       }
     }
 
+    const userPromptText = `
+--- MASTER INSTRUCTION ---
+${customPrompt}
+
+CRITICAL: 
+1. The images provided above are ONLY for visual reference (to understand character looks, art style, clothing, and colors). 
+2. Do NOT just describe the images. 
+3. You MUST generate the output STRICTLY based on the story, instructions, scene breakdown, and JSON format requested in the MASTER INSTRUCTION above.`;
+
+    parts.push({ text: userPromptText });
+
+    const ai = getGeminiClient(apiKey);
     const textOutput = await generateWithGeminiFallback(ai, {
       contents: { parts },
       config: {
