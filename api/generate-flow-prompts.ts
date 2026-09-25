@@ -94,20 +94,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 Your job is to read the images and the user's MASTER INSTRUCTION, and output a highly detailed JSON response.
 
 CRITICAL JSON SCHEMA REQUIREMENT:
-No matter what format the user requests in their prompt, you MUST output your final answer strictly in this root-level JSON structure. Place the scenes the user asked for inside the "flowAiPrompts" array:
+Because you are an API, you MUST output exactly ONE valid JSON root object. 
+If the user's MASTER INSTRUCTION asks you to "divide the output into 3 separate JSON prompts" or similar, you MUST place those 3 JSON objects inside the "flowAiPrompts" array. Do NOT output multiple disconnected JSON objects.
 
+Your final output MUST strictly use this structure:
 {
   "storyTitle": "Catchy, viral-worthy title in Indonesian",
   "storySummary": "2-3 sentence overview of the generated story",
   "visualStyleGuide": "Detailed visual consistency guide (art style, lighting, colors)",
   "characterDNA": [ { "name": "...", "appearance": "..." } ],
   "flowAiPrompts": [ 
-    // 👉 THIS IS WHERE YOU PUT THE SCENES REQUESTED BY THE USER'S MASTER INSTRUCTION 👈
+    // 👉 THIS IS WHERE YOU PUT THE SCENES/PARTS REQUESTED BY THE USER'S MASTER INSTRUCTION 👈
+    // If the user asked for 3 separate JSON prompts, put them here as 3 elements in this array.
+    // Apply all user constraints (duration, dialogues, no watermark, etc) to these objects.
   ],
   "hooks": [
+    // 👉 YOU MUST AUTOMATICALLY GENERATE 0-3 SECOND VIRAL HOOKS HERE 👈
     { "type": "visual", "hook_text": "...", "visual_cue": "...", "audio_cue": "..." }
   ],
   "viralMetadata": {
+    // 👉 YOU MUST AUTOMATICALLY GENERATE SEO METADATA HERE 👈
     "viral_titles": ["title 1", "title 2"],
     "viral_hashtags": ["#tag1", "#tag2"],
     "youtube_description": "...",
@@ -148,7 +154,8 @@ CRITICAL EXECUTION STEPS:
 1. READ the images above. Extract any text, dialogues, character looks, and art style.
 2. READ this MASTER INSTRUCTION. 
 3. GENERATE the story and scenes exactly as requested in the MASTER INSTRUCTION, combining it with the data from the images.
-4. WRAP your entire response in the mandatory JSON schema provided in your system instructions, placing the generated scenes inside the "flowAiPrompts" array, and automatically generating the "hooks" and "viralMetadata" to make the content go viral.`;
+4. If the MASTER INSTRUCTION asks for separate JSON prompts, place them as elements inside the "flowAiPrompts" array.
+5. WRAP your entire response in the mandatory JSON schema provided in your system instructions, and automatically generate the "hooks" and "viralMetadata" to make the content go viral.`;
 
     parts.push({ text: userPromptText });
 
