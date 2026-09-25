@@ -20,26 +20,72 @@ export default function StoryboardInput({
   const [dragActive, setDragActive] = useState(false);
   const [previewModalImg, setPreviewModalImg] = useState<string | null>(null);
 
-  const handleFiles = (files: FileList | null) => {
+  // Helper to compress image before converting to base64 to prevent Vercel 4.5MB payload limit
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          // Max dimension to scale down to (1024px is plenty for AI vision)
+          const MAX_SIZE = 1024;
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height = Math.round((height *= MAX_SIZE / width));
+              width = MAX_SIZE;
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width = Math.round((width *= MAX_SIZE / height));
+              height = MAX_SIZE;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(event.target?.result as string); // fallback to original if canvas fails
+            return;
+          }
+          
+          ctx.drawImage(img, 0, 0, width, height);
+          // Compress to webp at 75% quality (massively reduces base64 size)
+          const compressedBase64 = canvas.toDataURL('image/webp', 0.75);
+          resolve(compressedBase64);
+        };
+        img.onerror = (err) => reject(err);
+      };
+      reader.onerror = (err) => reject(err);
+    });
+  };
+
+  const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
-    Array.from(files).forEach((file) => {
-      if (!file.type.startsWith('image/')) return;
+    for (const file of Array.from(files)) {
+      if (!file.type.startsWith('image/')) continue;
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const base64 = e.target?.result as string;
+      try {
+        const compressedBase64 = await compressImage(file);
         const newItem: ReferenceImageItem = {
           id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
           name: file.name,
-          mimeType: file.type,
-          base64,
-          previewUrl: base64,
+          mimeType: 'image/webp', // we compressed it to webp
+          base64: compressedBase64,
+          previewUrl: compressedBase64,
         };
         setReferenceImages((prev) => [...prev, newItem]);
-      };
-      reader.readAsDataURL(file);
-    });
+      } catch (err) {
+        console.error('Failed to compress image:', err);
+      }
+    }
   };
 
   const handleDrag = (e: React.DragEvent) => {
