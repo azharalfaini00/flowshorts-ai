@@ -124,16 +124,34 @@ Ensure all parts of the JSON schema are filled out, including flowAiPrompts, hoo
         }
       }
       
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.6-flash',
-        contents: { parts },
-        config: {
-          systemInstruction,
-          responseMimeType: 'application/json',
-          temperature: 0.7,
+      let attempts = 0;
+      let lastErr: any;
+      while (attempts < 3) {
+        try {
+          const response = await ai.models.generateContent({
+            model: 'gemini-3.6-flash',
+            contents: { parts },
+            config: {
+              systemInstruction,
+              responseMimeType: 'application/json',
+              temperature: 0.7,
+            }
+          });
+          textOutput = response.text;
+          break; // Success, exit loop
+        } catch (err: any) {
+          lastErr = err;
+          attempts++;
+          const msg = err?.message?.toLowerCase() || '';
+          if (msg.includes('503') || msg.includes('overloaded') || msg.includes('429')) {
+            console.log(`Gemini overloaded/429. Retrying... attempt ${attempts}`);
+            await new Promise(resolve => setTimeout(resolve, 2000 * attempts));
+          } else {
+            break; // Not a retryable error
+          }
         }
-      });
-      textOutput = response.text;
+      }
+      if (!textOutput && lastErr) throw lastErr;
     } else if (provider === 'openai') {
       const openai = getOpenAIClient();
       const response = await openai.chat.completions.create({
