@@ -6,6 +6,7 @@ import Login from './pages/Login.tsx';
 import PendingApproval from './pages/PendingApproval.tsx';
 import AdminDashboard from './pages/AdminDashboard.tsx';
 import { AuthProvider, useAuth } from './context/AuthContext.tsx';
+import ErrorBoundary from './components/ErrorBoundary.tsx';
 import './index.css';
 
 // Full-screen loading spinner shown while auth state is being resolved
@@ -49,7 +50,11 @@ const ProtectedAppRoute = () => {
 
   // Admin goes to admin dashboard via /admin, but can also use /app
   // Approved users & admins both get access
-  return <App />;
+  return (
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
+  );
 };
 
 createRoot(document.getElementById('root')!).render(
