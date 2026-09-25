@@ -28,11 +28,12 @@ function isRetryableError(err: any): boolean {
 async function generateWithGeminiFallback(ai: GoogleGenAI, params: any): Promise<string> {
   const models = [
     'gemini-2.5-flash',
-    'gemini-flash-latest',
+    'gemini-2.5-flash-lite',
     'gemini-2.0-flash',
-    'gemini-1.5-flash',
+    'gemini-2.0-flash-lite',
   ];
   let lastError: any = null;
+  let hasOverloadError = false;
 
   for (const model of models) {
     const maxRetries = 2;
@@ -40,18 +41,28 @@ async function generateWithGeminiFallback(ai: GoogleGenAI, params: any): Promise
       try {
         const response = await ai.models.generateContent({ ...params, model });
         if (response && response.text) return response.text;
-        break;
+        break; // break attempt loop if response is somehow empty but no error
       } catch (err: any) {
         console.warn(`[flow-prompts] Model ${model} attempt ${attempt + 1} failed:`, err?.message || err);
         lastError = err;
-        if (isRetryableError(err) && attempt < maxRetries) {
-          const delay = 1000 * Math.pow(2, attempt);
-          await new Promise((resolve) => setTimeout(resolve, delay));
+        
+        if (isRetryableError(err)) {
+          hasOverloadError = true;
+          if (attempt < maxRetries) {
+            const delay = 1000 * Math.pow(2, attempt);
+            await new Promise((resolve) => setTimeout(resolve, delay));
+          } else {
+            break; // exhausted retries for this model
+          }
         } else {
-          break;
+          break; // non-retryable error (like 404), move to next model
         }
       }
     }
+  }
+  
+  if (hasOverloadError) {
+    throw new Error("Server AI sedang sangat sibuk (Overloaded). Silakan coba lagi dalam beberapa menit.");
   }
   throw lastError;
 }
