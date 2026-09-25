@@ -3,8 +3,10 @@ import { GoogleGenAI, Type } from '@google/genai';
 import OpenAI from 'openai';
 
 function getGroqClient(): OpenAI {
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) throw new Error('GROQ_API_KEY is missing.');
+  const envKeys = process.env.GROQ_API_KEY;
+  if (!envKeys) throw new Error('GROQ_API_KEY is missing.');
+  const keys = envKeys.split(',').map(k => k.trim()).filter(Boolean);
+  const apiKey = keys[Math.floor(Math.random() * keys.length)];
   return new OpenAI({
     apiKey,
     baseURL: 'https://api.groq.com/openai/v1',
@@ -12,14 +14,18 @@ function getGroqClient(): OpenAI {
 }
 
 function getOpenAIClient(): OpenAI {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error('OPENAI_API_KEY is missing.');
+  const envKeys = process.env.OPENAI_API_KEY;
+  if (!envKeys) throw new Error('OPENAI_API_KEY is missing.');
+  const keys = envKeys.split(',').map(k => k.trim()).filter(Boolean);
+  const apiKey = keys[Math.floor(Math.random() * keys.length)];
   return new OpenAI({ apiKey });
 }
 
 function getGeminiClient(): GoogleGenAI {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('GEMINI_API_KEY is missing.');
+  const envKeys = process.env.GEMINI_API_KEY;
+  if (!envKeys) throw new Error('GEMINI_API_KEY is missing.');
+  const keys = envKeys.split(',').map(k => k.trim()).filter(Boolean);
+  const apiKey = keys[Math.floor(Math.random() * keys.length)];
   return new GoogleGenAI({
     apiKey,
     httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
