@@ -28,16 +28,19 @@ function isRetryableError(err: any): boolean {
 }
 
 async function generateWithFallback(ai: GoogleGenAI, params: any) {
-  // Use valid, stable Gemini model identifiers in priority order
+  // Ordered by stability/availability: start with reliable models, then newer ones as fallback
   const models = [
-    'gemini-3.6-flash',
-    'gemini-3.5-flash',
-    'gemini-flash-latest',
+    'gemini-2.5-flash',       // Most stable, widely available
+    'gemini-flash-latest',    // Stable alias
+    'gemini-3.1-flash-lite',  // Lightweight, fast
+    'gemini-3.5-flash',       // Mid-tier fallback
+    'gemini-3.6-flash',       // Newer, may have high demand
+    'gemini-3.8-flash',       // Latest as last resort
   ];
   let lastError: any = null;
 
   for (const model of models) {
-    const maxRetries = 2;
+    const maxRetries = 3;
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         const response = await ai.models.generateContent({ ...params, model });
@@ -48,8 +51,8 @@ async function generateWithFallback(ai: GoogleGenAI, params: any) {
         console.warn(`Model ${model} attempt ${attempt + 1} failed:`, err?.message || err);
         lastError = err;
         if (isRetryableError(err) && attempt < maxRetries) {
-          // Exponential backoff: 2s, 4s
-          const delay = 2000 * Math.pow(2, attempt);
+          // Exponential backoff: 1s, 2s, 4s
+          const delay = 1000 * Math.pow(2, attempt);
           console.log(`Retrying ${model} in ${delay}ms...`);
           await new Promise((resolve) => setTimeout(resolve, delay));
         } else {

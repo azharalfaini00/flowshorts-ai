@@ -25,6 +25,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const ADMIN_EMAIL = 'alfainialfa1@gmail.com';
 
   const fetchUserStatus = async (currentUser: User) => {
+    // Safety timeout: if Supabase is unreachable, don't leave user on blank screen
+    const timeoutId = setTimeout(() => {
+      console.warn('fetchUserStatus timed out — defaulting to pending');
+      setStatus('pending');
+      setIsLoading(false);
+    }, 10000);
+
     try {
       // 1. Cek apakah user ada di database
       let { data, error } = await supabase
@@ -60,7 +67,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err) {
       console.error('Error fetching user status:', err);
+      setStatus('pending'); // Fallback agar tidak stuck
     } finally {
+      clearTimeout(timeoutId);
       setIsLoading(false);
     }
   };
