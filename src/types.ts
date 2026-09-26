@@ -90,6 +90,7 @@ export interface ScenePrompt {
   scene: string;
   adegan: number; // For internal indexing
   judul: string;  // Scene title
+  title_internal?: string;
   prompt: string; // The text-to-image prompt
   duration: string;
   continuity_priority: string;
