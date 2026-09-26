@@ -124,9 +124,9 @@ You MUST output exactly ONE valid JSON root object. The order of keys MUST be EX
 IMPORTANT: You MUST generate "hooks" and "viralMetadata" FIRST before "flowAiPrompts". Do not skip them.
 
 ====== CRITICAL RULE: flowAiPrompts CONTENT ======
-The elements inside the "flowAiPrompts" array MUST be the exact, fully-detailed JSON objects that the user requested in their MASTER INSTRUCTION.
-
-DO NOT simplify, shorten, or reduce the richness of the scene JSON objects.
+The elements inside the "flowAiPrompts" array MUST be the EXACT, fully-detailed JSON objects that the user requested in their MASTER INSTRUCTION.
+Treat the MASTER INSTRUCTION as absolute law. If the user asks for a specific JSON schema, you MUST output that exact schema inside the flowAiPrompts array.
+DO NOT miss a single instruction from the user.
 IF the user's MASTER INSTRUCTION requests scenes with fields like:
   - "character_lock", "voice_lock", "continuity_instruction", "camera_continuity"
   - "position_continuity", "lighting_continuity", "dialogue", "audio"
@@ -157,15 +157,15 @@ IF the user requests 3 separate JSON prompts, put all 3 as elements in the "flow
       }
     }
 
-    const userPromptText = `--- MASTER INSTRUCTION ---
+    const userPromptText = `--- MASTER INSTRUCTION (ABSOLUTE LAW) ---
 ${customPrompt}
 
-EXECUTION STEPS:
-1. ANALYZE the storyboard images above — read all text, dialogues, character appearances, and story elements.
-2. READ this MASTER INSTRUCTION fully.
-3. GENERATE each requested scene as a FULLY DETAILED JSON object exactly matching the structure and all fields requested in the MASTER INSTRUCTION. Do not omit any field.
-4. Place all scene JSON objects inside the "flowAiPrompts" array.
-5. AUTO-GENERATE the "hooks" and "viralMetadata" fields based on the story.
+--- EXECUTION STEPS ---
+1. ANALYZE the storyboard images above — read ALL text, dialogues, character appearances, and story elements.
+2. READ the MASTER INSTRUCTION above. You MUST follow every single rule, constraint, and formatting requirement listed in it.
+3. GENERATE each requested scene as a FULLY DETAILED JSON object exactly matching the structure, keys, and values requested in the MASTER INSTRUCTION. Do not omit ANY field. Do not summarize.
+4. Place all these scene JSON objects exactly as they are inside the "flowAiPrompts" array.
+5. AUTO-GENERATE the "hooks" and "viralMetadata" fields.
 6. Return the complete single JSON root object.`;
 
     parts.push({ text: userPromptText });
@@ -176,7 +176,7 @@ EXECUTION STEPS:
       config: {
         systemInstruction,
         responseMimeType: 'application/json',
-        temperature: 0.75,
+        temperature: 0.3, // Lower temperature to force strict adherence to the master prompt
       },
     });
 
