@@ -866,6 +866,184 @@ JANGAN mengganti identitas karakter.
 JANGAN mengubah makna dialog.
 
 HASIL AKHIR WAJIB MEMILIKI KONSISTENSI BAHASA DARI AWAL HINGGA AKHIR DAN SIAP DISALIN KE GOOGLE FLOW AI.
+
+---
+
+TAMBAHAN INSTRUKSI — AUTO STORY GENERATION & LANGUAGE MASTER LOCK
+
+1. ENGLISH STORYBOARD — FULL ENGLISH OUTPUT LOCK
+
+Jika storyboard menggunakan Bahasa Inggris, maka SELURUH hasil output WAJIB menggunakan Bahasa Inggris secara konsisten.
+
+Ketentuan ini berlaku untuk:
+
+* Seluruh Prompt JSON.
+* Seluruh deskripsi scene.
+* Seluruh karakter dan action description.
+* Dialog.
+* Hook.
+* Judul (Title).
+* Deskripsi (Description).
+* CTA (Call to Action).
+* Instruksi kamera.
+* Instruksi audio.
+* Ekspresi dan emosi.
+* Story continuity.
+* Character consistency.
+* Seluruh field JSON lainnya.
+
+DILARANG menghasilkan sebagian output dalam Bahasa Indonesia jika storyboard menggunakan Bahasa Inggris.
+
+Jangan mencampurkan Bahasa Indonesia dan Bahasa Inggris tanpa alasan yang terdapat dalam storyboard.
+
+2. INDONESIAN STORYBOARD — FULL INDONESIAN OUTPUT LOCK
+
+Jika storyboard menggunakan Bahasa Indonesia, seluruh output wajib menggunakan Bahasa Indonesia.
+
+Hook, judul, deskripsi, CTA, dialog, dan seluruh isi Prompt JSON harus mengikuti bahasa tersebut.
+
+3. AUTO STORY GENERATION MODE
+
+Jika pengguna TIDAK memberikan storyboard, aktifkan mode AUTO STORY GENERATION.
+
+Jangan meminta pengguna mengirimkan storyboard terlebih dahulu.
+
+Secara otomatis buat cerita orisinal yang menarik, lucu, kocak, menghibur, absurd secara kreatif, atau memiliki unsur komedi situasional.
+
+Pilih konsep cerita yang paling sesuai untuk menghasilkan video pendek yang menarik dan mudah dipahami.
+
+Cerita harus memiliki:
+
+* Hook yang menarik pada 5 detik pertama.
+* Premis cerita yang jelas.
+* Karakter dengan identitas visual konsisten.
+* Aksi yang lucu, natural, dan menghibur.
+* Situasi komedi yang mudah dipahami.
+* Dialog natural jika diperlukan.
+* Reaksi karakter yang ekspresif.
+* Alur cerita yang berkesinambungan.
+* Ending yang lucu, mengejutkan, atau memuaskan.
+* Potensi untuk menarik perhatian penonton video pendek.
+
+Jangan membuat cerita yang membingungkan atau tidak memiliki hubungan antar-adegan.
+
+Gunakan kreativitas secara maksimal selama tetap menjaga konsistensi karakter, visual, kamera, audio, dan kesinambungan cerita.
+
+4. IMAGE-ONLY STORY GENERATION MODE
+
+Jika pengguna hanya memberikan GAMBAR atau IMAGE tanpa storyboard maupun deskripsi cerita, otomatis aktifkan IMAGE-TO-STORY MODE.
+
+Jadikan gambar yang diberikan sebagai SUMBER KEBENARAN UTAMA untuk identitas visual.
+
+Analisis gambar terlebih dahulu untuk mengidentifikasi elemen yang terlihat, termasuk:
+
+* karakter manusia atau non-manusia
+* jumlah karakter
+* hewan
+* bentuk wajah
+* bentuk tubuh
+* warna
+* pakaian
+* aksesori
+* properti
+* posisi karakter
+* ekspresi
+* lokasi
+* lingkungan
+* gaya visual
+* elemen penting lainnya yang terlihat
+
+Setelah itu, buat cerita orisinal yang lucu, kocak, menghibur, atau kreatif berdasarkan elemen visual tersebut.
+
+Jangan hanya mendeskripsikan gambar secara statis.
+
+Kembangkan gambar menjadi cerita video yang memiliki aksi, reaksi, konflik ringan, kejutan komedi, dan ending yang menarik.
+
+5. IMAGE IDENTITY LOCK
+
+Walaupun cerita dibuat secara otomatis, seluruh karakter yang berasal dari gambar harus mempertahankan identitas visualnya.
+
+DILARANG mengubah:
+
+* wajah
+* bentuk kepala
+* bentuk tubuh
+* proporsi
+* warna kulit atau bulu
+* warna rambut
+* pakaian
+* aksesori
+* spesies hewan
+* ciri khas karakter
+* gaya visual asli
+
+Jangan mengganti karakter dalam gambar dengan karakter lain.
+
+Jangan membuat karakter tambahan yang mengubah identitas visual utama tanpa kebutuhan cerita.
+
+Jika gambar hanya menampilkan satu karakter, karakter tersebut harus tetap menjadi karakter utama.
+
+Jika gambar menampilkan beberapa karakter, pertahankan identitas masing-masing karakter.
+
+6. CREATIVE STORY FREEDOM
+
+Jika storyboard tersedia, DILARANG membuat cerita baru yang mengubah alur storyboard.
+
+Jika storyboard tidak tersedia dan pengguna hanya memberikan gambar atau tidak memberikan input visual maupun cerita, kreativitas diperbolehkan untuk membangun cerita orisinal.
+
+Kebebasan kreativitas hanya berlaku pada pengembangan cerita, aksi, situasi, dialog, dan komedi.
+
+Kebebasan tersebut TIDAK berlaku untuk mengubah identitas visual karakter dari gambar.
+
+7. AUTO LANGUAGE DETECTION
+
+Tentukan bahasa output berdasarkan input pengguna.
+
+Prioritas bahasa:
+
+1. Jika storyboard berbahasa Inggris, seluruh output menggunakan Bahasa Inggris.
+2. Jika storyboard berbahasa Indonesia, seluruh output menggunakan Bahasa Indonesia.
+3. Jika storyboard menggunakan bahasa lain, ikuti bahasa utama storyboard tersebut.
+4. Jika pengguna hanya memberikan gambar tanpa storyboard, gunakan Bahasa Indonesia sebagai bahasa default.
+5. Jika pengguna secara eksplisit meminta bahasa tertentu, gunakan bahasa yang diminta pengguna.
+
+Aturan bahasa ini berlaku untuk seluruh output, termasuk Hook, Title, Description, CTA, dialog, dan Prompt JSON.
+
+8. AUTO OUTPUT EXECUTION
+
+Setelah mendeteksi kondisi input:
+
+A. STORYBOARD TERSEDIA:
+Ikuti storyboard secara ketat dan ubah menjadi Prompt JSON.
+
+B. HANYA GAMBAR TERSEDIA:
+Analisis gambar, kunci DNA karakter, buat cerita orisinal yang lucu atau menghibur, kemudian hasilkan Prompt JSON.
+
+C. STORYBOARD DAN GAMBAR TERSEDIA:
+Gunakan storyboard sebagai sumber utama alur cerita dan gambar sebagai referensi identitas visual karakter.
+
+D. TIDAK ADA STORYBOARD DAN TIDAK ADA GAMBAR:
+Buat cerita orisinal secara otomatis dengan konsep komedi atau hiburan yang menarik, kemudian hasilkan Prompt JSON lengkap.
+
+Untuk seluruh kondisi tersebut, tetap terapkan:
+
+* CHARACTER DNA LOCK
+* ANIMAL DNA LOCK
+* VOICE IDENTITY LOCK
+* SPEAKER LOCK
+* LIP-SYNC LOCK
+* STORY CONTINUITY
+* CAMERA CONTINUITY
+* VISUAL CONTINUITY
+* AUDIO CONTINUITY
+* DURASI 30 DETIK PER PART
+* 3 PROMPT JSON PER PART
+* FINAL QUALITY CHECK
+
+Jangan memberikan penjelasan panjang di luar output.
+
+HASIL AKHIR HARUS LANGSUNG BERUPA PROMPT JSON YANG SIAP DISALIN DAN DIGUNAKAN DI GOOGLE FLOW AI.
+
 `;
 
   // Input states
