@@ -87,14 +87,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const hasImages = Array.isArray(referenceImages) && referenceImages.length > 0;
 
-    // ✅ System instruction: Kembalikan kepintaran struktur JSON seperti awal aplikasi,
-    // tapi tetap menghormati isi cerita dari master prompt.
+    // ✅ System instruction: Output schema baru per adegan — sesuai format yang diminta user.
     const systemInstruction = `You are a world-class AI Video Director, Storyboard Artist, and Viral Content Strategist.
 
 Your job is to read the uploaded storyboard images and the user's MASTER INSTRUCTION, then output a highly detailed JSON response.
 
 ====== CRITICAL RULE: OUTPUT STRUCTURE ======
-You MUST output exactly ONE valid JSON root object. The order of keys MUST be EXACTLY as follows:
+You MUST output exactly ONE valid JSON root object with keys in this EXACT order:
 
 {
   "storyTitle": "Catchy viral title in Bahasa Indonesia",
@@ -105,8 +104,8 @@ You MUST output exactly ONE valid JSON root object. The order of keys MUST be EX
     {
       "type": "visual",
       "hook_text": "Hook dialog in Bahasa Indonesia",
-      "visual_cue": "Visual description in English",
-      "audio_cue": "Audio/music description in English"
+      "visual_cue": "Visual description",
+      "audio_cue": "Audio/music description"
     }
   ],
   "viralMetadata": {
@@ -116,30 +115,67 @@ You MUST output exactly ONE valid JSON root object. The order of keys MUST be EX
     "supporting_hashtags": [ { "category": "Category Name", "tags": ["#tag"] } ],
     "pinned_comment_suggestion": "Pinned comment text in Bahasa Indonesia"
   },
-  "flowAiPrompts": [
-    // PLACE ALL REQUESTED SCENE JSON OBJECTS HERE
-  ]
+  "flowAiPrompts": [ /* see schema below */ ]
 }
 
-IMPORTANT: You MUST generate "hooks" and "viralMetadata" FIRST before "flowAiPrompts". Do not skip them.
+IMPORTANT: Generate "hooks" and "viralMetadata" BEFORE "flowAiPrompts". Do not skip them.
 
-====== CRITICAL RULE: flowAiPrompts CONTENT ======
-The elements inside the "flowAiPrompts" array MUST be the EXACT, fully-detailed JSON objects that the user requested in their MASTER INSTRUCTION.
-Treat the MASTER INSTRUCTION as absolute law. If the user asks for a specific JSON schema, you MUST output that exact schema inside the flowAiPrompts array.
-DO NOT miss a single instruction from the user.
-IF the user's MASTER INSTRUCTION requests scenes with fields like:
-  - "character_lock", "voice_lock", "continuity_instruction", "camera_continuity"
-  - "position_continuity", "lighting_continuity", "dialogue", "audio"
-  - "global_negative_constraints", "ending", "hook", etc.
-THEN EVERY ONE OF THOSE FIELDS MUST BE PRESENT AND FULLY FILLED OUT in each element of "flowAiPrompts".
+====== MANDATORY SCHEMA: Each element in "flowAiPrompts" MUST follow this EXACT structure ======
+Every single field below is REQUIRED. Do NOT omit, abbreviate, or rename any field.
 
-IF the user requests 3 separate JSON prompts, put all 3 as elements in the "flowAiPrompts" array.
+{
+  "part": "Part [N]",
+  "prompt": "[prompt number as string: \"1\", \"2\", or \"3\"]",
+  "duration": "10 detik",
+  "scene": "Deskripsi singkat scene dalam Bahasa Indonesia (1 kalimat).",
+  "reference_priority": "Reference image adalah sumber kebenaran visual utama. Pertahankan identitas seluruh karakter, hewan, pakaian, background, object, style, warna, proporsi, lighting dan kontinuitas.",
+  "continuity_start": "Mulai tepat setelah [prompt/part sebelumnya]. Jelaskan kondisi awal scene secara spesifik.",
+  "characters": {
+    "[NamaKarakter1]": "Deskripsi visual LENGKAP karakter 1: rambut, wajah, kulit, mata, ekspresi, usia visual, tubuh, proporsi, pakaian warna, detail pakaian, aksesori, ciri khas — semua detail dari reference image.",
+    "[NamaKarakter2]": "Deskripsi visual LENGKAP karakter 2."
+  },
+  "background": "Deskripsi environment: lokasi spesifik, waktu hari, cuaca, kondisi pencahayaan, vegetasi, elemen lingkungan, warna dominan, suasana visual.",
+  "object": "Deskripsi semua object fisik penting dalam scene: nama, warna, ukuran, posisi, fungsi dalam cerita.",
+  "voice_lock": {
+    "[NamaKarakter1]": "Deskripsi suara karakter 1 (karakter, nada, usia, emosi).",
+    "[NamaKarakter2]": "Deskripsi suara karakter 2.",
+    "rule": "Jangan menukar suara atau speaker. Setiap karakter hanya mengucapkan dialognya sendiri."
+  },
+  "video_prompt": "PROMPT VIDEO UTAMA — tulis dengan sangat detail dan panjang (minimum 150 kata). Sertakan: (1) kondisi awal scene persis dari akhir prompt sebelumnya, (2) aksi setiap karakter secara kronologis, (3) setiap baris dialog dengan speaker yang jelas, (4) ekspresi dan reaksi karakter, (5) gerakan kamera, (6) suasana dan atmosphere, (7) kondisi akhir yang dapat disambungkan ke prompt berikutnya. Gunakan Bahasa Indonesia.",
+  "dialogue": [
+    { "speaker": "[NamaKarakter]", "text": "Ucapan lengkap karakter dalam Bahasa Indonesia." }
+  ],
+  "camera": {
+    "shot": "Jenis shot (e.g. tracking medium wide shot, close-up, medium shot).",
+    "angle": "Sudut kamera (e.g. eye-level anak, low angle, over-the-shoulder).",
+    "movement": "Gerakan kamera (e.g. tracking shot lembut, slow push-in, slow pull-back).",
+    "focus": "Teknik fokus (e.g. rack focus dari karakter A ke karakter B).",
+    "composition": "Komposisi frame (e.g. karakter di foreground, lingkungan terlihat di background)."
+  },
+  "sound": {
+    "ambience": "Suara latar alami (e.g. suara hutan siang, burung, angin, dedaunan).",
+    "sfx": "Sound effects spesifik per kejadian dalam scene (e.g. langkah kaki, suara object disentuh).",
+    "music": "Jenis musik latar (e.g. musik petualangan anak ceria, musik edukatif dengan ritme ringan).",
+    "dialogue_rule": "Urutan dialog eksplisit (e.g. Karakter A berbicara dulu, kemudian Karakter B. Tidak overlap)."
+  },
+  "no_text": "Tidak boleh ada subtitle, caption, text overlay, judul, speech bubble, watermark, logo, UI atau notification di dalam video.",
+  "ending": "Kondisi akhir scene ini — posisi setiap karakter, apa yang baru terjadi, apa yang terlihat di frame.",
+  "next_prompt": "Prompt [N+1] dimulai dari kondisi ketika [kondisi akhir scene ini]."
+}
+
+ADDITIONAL RULES:
+- The LAST prompt of the LAST part: replace "next_prompt" with "next_part_hook" describing what Part [N+1] will begin with.
+- "video_prompt" MUST be the longest field. Write minimum 150 words for it.
+- "characters" MUST include ALL characters appearing in that scene.
+- "dialogue" MUST list ALL spoken lines in chronological order.
+- Each scene prompt MUST start exactly where the previous one ended — no time jumps.
+- NEVER swap speakers. NEVER have a character speak another character's lines.
+- NEVER put any text on screen.
 
 ====== OUTPUT RULES ======
-1. All narrative content (dialog, action, story, hooks, titles, metadata) MUST be in Bahasa Indonesia.
-2. Image generation prompts for Google Flow AI inside scene objects MUST be in English.
-3. Dialogues MUST be assigned to the CORRECT speaker. Never mix up speakers.
-4. Never add any text, explanation, or markdown OUTSIDE the JSON.`;
+1. ALL narrative content (dialogue, action, description, sound, hooks, metadata) MUST be in Bahasa Indonesia.
+2. NEVER add any explanation or markdown text OUTSIDE the JSON object.
+3. Dialogues MUST be assigned to the CORRECT speaker. Never mix up speakers.`;
 
     const parts: any[] = [];
     

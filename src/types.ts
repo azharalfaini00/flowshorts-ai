@@ -67,10 +67,16 @@ export interface SceneEnvironment {
 }
 
 export interface SceneCamera {
+  // Legacy fields
   opening_shot: string;
   movement: string;
   framing: string;
   ending_position: string;
+  // New schema fields
+  shot?: string;
+  angle?: string;
+  focus?: string;
+  composition?: string;
 }
 
 export interface SceneStory {
@@ -91,7 +97,7 @@ export interface ScenePrompt {
   adegan: number; // For internal indexing
   judul: string;  // Scene title
   title_internal?: string;
-  prompt: string; // The text-to-image prompt
+  prompt: string; // The text-to-image prompt OR prompt number (new schema)
   duration: string;
   continuity_priority: string;
   reference_storyboard: string;
@@ -105,6 +111,27 @@ export interface ScenePrompt {
   image_url?: string | null;
   image_source?: string | null;
   image_error?: string;
+  // ===== New schema fields (optional for backward compat) =====
+  part?: string;                         // e.g. "Part 3"
+  scene_label?: string;                  // Short scene description
+  reference_priority?: string;
+  continuity_start?: string;
+  characters?: Record<string, string>;
+  background?: string;
+  object?: string | Record<string, string>;
+  voice_lock?: Record<string, string>;
+  video_prompt?: string;
+  dialogue?: Array<{ speaker: string; text: string }>;
+  sound?: {
+    ambience?: string;
+    sfx?: string;
+    music?: string;
+    dialogue_rule?: string;
+  };
+  no_text?: string;
+  ending?: string;
+  next_prompt?: string;
+  next_part_hook?: string;
 }
 
 export interface ViralHook {
@@ -151,4 +178,62 @@ export interface ReferenceImageItem {
   mimeType: string;
   base64: string;
   previewUrl: string;
+}
+
+// ====== NEW SCHEMA: JSON per Adegan (Flow Scene Prompt) ======
+// Digunakan untuk output prompt per adegan sesuai format baru.
+
+export interface FlowDialogueLine {
+  speaker: string;
+  text: string;
+}
+
+export interface FlowCameraSpec {
+  shot: string;
+  angle: string;
+  movement: string;
+  focus: string;
+  composition: string;
+}
+
+export interface FlowSoundSpec {
+  ambience: string;
+  sfx: string;
+  music: string;
+  dialogue_rule: string;
+}
+
+export interface FlowVoiceLock {
+  [character: string]: string; // e.g. "Budi": "Suara anak laki-laki ceria..."
+  rule: string;
+}
+
+/**
+ * Schema JSON per adegan baru — sesuai format contoh user.
+ * Setiap elemen array `flowAiPrompts` menggunakan tipe ini.
+ */
+export interface FlowScenePrompt {
+  part: string;                          // e.g. "Part 3"
+  prompt: string;                        // Nomor prompt e.g. "1", "2", "3"
+  duration: string;                      // e.g. "10 detik"
+  scene: string;                         // Deskripsi singkat scene
+  reference_priority: string;            // Instruksi prioritas reference image
+  continuity_start: string;             // Dari mana scene ini dimulai
+  characters: Record<string, string>;   // { "Budi": "Deskripsi visual Budi...", ... }
+  background: string;                    // Deskripsi background/environment
+  object?: string | Record<string, string>; // Object penting (opsional, bisa string atau record)
+  voice_lock: FlowVoiceLock;            // Kunci suara per karakter + rule
+  video_prompt: string;                  // Prompt video utama (full detail)
+  dialogue: FlowDialogueLine[];         // Array dialog per speaker
+  camera: FlowCameraSpec;               // Spesifikasi kamera
+  sound: FlowSoundSpec;                 // Spesifikasi audio
+  no_text: string;                       // Instruksi tidak ada teks di layar
+  ending: string;                        // Kondisi akhir scene ini
+  next_prompt?: string;                  // Petunjuk prompt berikutnya (opsional)
+  next_part_hook?: string;               // Hook ke Part berikutnya (opsional, hanya pada prompt terakhir)
+  // Legacy/fallback fields agar backward compatible
+  adegan?: number;
+  judul?: string;
+  prompt_text?: string;
+  [key: string]: any;                    // Allow extra fields dari AI
 }
