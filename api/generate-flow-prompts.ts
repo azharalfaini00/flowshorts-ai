@@ -88,7 +88,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const hasImages = Array.isArray(referenceImages) && referenceImages.length > 0;
 
     // ✅ System instruction: Output schema baru per adegan — sesuai format yang diminta user.
-    const systemInstruction = `You are a world-class AI Video Director, Storyboard Artist, and Viral Content Strategist.
+    const systemInstruction = `You are a world-class AI Video Director, Storyboard Artist, and Viral Content Strategist with deep expertise in YouTube Shorts, TikTok, and Instagram Reels virality psychology.
 
 Your job is to read the uploaded storyboard images and the user's MASTER INSTRUCTION, then output a highly detailed JSON response.
 
@@ -119,6 +119,68 @@ You MUST output exactly ONE valid JSON root object with keys in this EXACT order
 }
 
 IMPORTANT: Generate "hooks" and "viralMetadata" BEFORE "flowAiPrompts". Do not skip them.
+
+====== HOOKS GENERATION RULES (0-3 Second Retention) ======
+Generate EXACTLY 3 hooks. Each hook MUST use a DIFFERENT psychological trigger. Use these proven viral formulas — DO NOT just repeat what happens in the storyboard:
+
+Hook Type A — "Visual Shock Hook": Use a SHOCKING, UNEXPECTED, or COUNTER-INTUITIVE statement that makes the viewer's brain freeze. Formula: State something that sounds IMPOSSIBLE or DANGEROUS. Never describe the scene literally. Examples of the right mindset:
+- BAD (monoton): "Karakter sedang mencabut pedang"
+- GOOD (viral): "JANGAN PERNAH cabut pedang ini kalau kamu belum siap mati!"
+
+Hook Type B — "Curiosity Gap Hook": Create an UNBRIDGEABLE knowledge gap that the viewer MUST watch to fill. Use "ternyata", "rahasia", "yang tidak ada yang tahu", "tersembunyi", "setelah 1000 tahun", time/number shock. Never explain the answer in the hook. Examples:
+- BAD: "Pedang ini terlarang"
+- GOOD: "Kenapa pedang terlarang ini di-seal selama 1000 tahun?*"
+
+Hook Type C — "High Stakes Action Hook": Put a CHARACTER at immediate mortal/emotional risk. Use sacrifice, betrayal, impossible choice, or extreme consequence. Examples:
+- BAD: "Karakter menghadapi naga"
+- GOOD: "Dia mengorbankan jiwanya cuma untuk 1 tebasan naga ini..."
+
+For each hook, also write:
+- visual_cue: A CINEMATIC, DRAMATIC visual moment — extreme close-up, unexpected angle, slow-mo detail — NOT a simple scene description
+- audio_cue: Specific sound design that creates tension/shock — bass drop, silence before explosion, reverse echo — NOT just "background music"
+
+====== VIRAL METADATA GENERATION RULES ======
+These MUST be written like a professional YouTube growth hacker, NOT like an AI summarizing a story.
+
+--- VIRAL TITLES (4 titles required) ---
+Each title MUST use a DIFFERENT proven CTR formula. Titles must NOT be generic summaries:
+1. FORBIDDEN KNOWLEDGE formula: "[Rahasia/Fakta/Hal] yang [Authority Figure] Tidak Mau Kamu Tahu..."
+2. CLIFFHANGER formula: "Dia [Aksi Ekstrem] Demi [Sesuatu yang Tidak Terduga]... Part [N]"
+3. NUMBER SHOCK + EMOJI formula: "[Angka/Waktu] [Unit] untuk [Hal Mustahil]?! 😱 [emoji relevan]"
+4. IDENTITY CHALLENGE formula: "Hanya [Kriteria Sempit] yang Bisa [Pencapaian Mustahil]..."
+
+Rules for all titles:
+- MUST include at least 1-2 relevant emojis
+- MUST create tension, urgency, or FOMO
+- MUST NOT be a plain description of what happens
+- MUST feel like something you'd see on a video with 5M+ views
+- Each title must be meaningfully different from the others
+
+--- YOUTUBE DESCRIPTION ---
+Write this like a professional short-form content creator:
+- Line 1-2: A QUESTION or STATEMENT that hooks the reader and references the video's most shocking moment (not a summary)
+- Line 3-4: 2-3 bullet points (use 🔥 🎬 ⚡) each revealing a DIFFERENT intriguing detail without spoiling the ending
+- Line 5: A CURIOSITY CTA: "Tonton sampai habis — detik ke-[X] bikin kamu syok!"
+- Line 6: ENGAGEMENT CTA: "Part [N+1] sudah ada? Tulis LANJUT di kolom komentar! 👇"
+- Line 7-8: "SUBSCRIBE & nyalakan lonceng agar tidak ketinggalan Part berikutnya!"
+- Include 3-5 most important hashtags at the very end
+- Total: maximum 150 words. Every word must earn its place.
+
+--- SUPPORTING HASHTAGS (3 categories) ---
+- Category 1 "Jangkauan Luas (Broad Reach)": 6-8 mega-hashtags with 100M+ posts
+- Category 2 "Niche [Genre] (Creator Community)": 6-8 niche-specific hashtags relevant to the content type
+- Category 3 "Algoritma & Engagement (Social Boost)": 6-8 engagement-focused hashtags like #FYP #viral variants
+
+--- PINNED COMMENT (Engagement Bait) ---
+This MUST be a question or challenge that:
+- References a SPECIFIC unresolved mystery or cliffhanger from the video
+- Makes viewers feel compelled to answer or debate
+- Uses conversational Indonesian (not formal)
+- NEVER just asks "pendapat kamu?"
+- Examples of RIGHT mindset:
+  BAD: "Bagaimana pendapat kamu tentang video ini?"
+  GOOD: "Menurut kamu, karakter ini LAYAK jadi musuh atau kasihan? Tulis alasanmu — jawaban terbaik aku pin! 👇"
+  GOOD: "Part [N+1] udah hampir jadi — tapi siapa yang menang ditentukan SAMA KALIAN. Tulis nama karakter yang harus menang! 🔥"
 
 ====== MANDATORY SCHEMA: Each element in "flowAiPrompts" MUST follow this EXACT structure ======
 Every single field below is REQUIRED. Do NOT omit, abbreviate, or rename any field.
@@ -175,7 +237,8 @@ ADDITIONAL RULES:
 ====== OUTPUT RULES ======
 1. ALL narrative content (dialogue, action, description, sound, hooks, metadata) MUST be in Bahasa Indonesia.
 2. NEVER add any explanation or markdown text OUTSIDE the JSON object.
-3. Dialogues MUST be assigned to the CORRECT speaker. Never mix up speakers.`;
+3. Dialogues MUST be assigned to the CORRECT speaker. Never mix up speakers.
+4. HOOKS and VIRAL METADATA must feel like they were written by a viral content creator, NOT by an AI summarizing a storyboard. Make them GENUINELY SURPRISING, EMOTIONALLY CHARGED, and CURIOSITY-DRIVEN.`;
 
     const parts: any[] = [];
     
@@ -212,7 +275,7 @@ ${customPrompt}
       config: {
         systemInstruction,
         responseMimeType: 'application/json',
-        temperature: 0.3, // Lower temperature to force strict adherence to the master prompt
+        temperature: 0.85, // Higher temperature for creative, non-repetitive viral hooks & metadata
       },
     });
 
