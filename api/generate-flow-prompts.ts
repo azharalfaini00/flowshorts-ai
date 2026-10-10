@@ -69,41 +69,199 @@ async function generateWithGeminiFallback(ai: GoogleGenAI, params: any): Promise
 
 export const maxDuration = 60;
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+/**
+ * Detect the primary output language from the storyboard/custom prompt.
+ * Returns 'en' for English or 'id' for Indonesian (default).
+ */
+function detectOutputLanguage(customPrompt: string): 'en' | 'id' {
+  const text = (customPrompt || '').toLowerCase();
+  // Strong English signals: common English words that are rare in Indonesian
+  const enSignals = [
+    'the ', ' is ', ' are ', ' was ', ' were ', ' will ', ' have ', ' has ',
+    'scene', 'character', 'camera', 'background', 'dialogue', 'story',
+    'visual', 'hook', 'description', 'title', 'hashtag',
+    'lock', 'prompt', 'storyboard', 'this ', 'that ', 'with ', 'from ', ' and ',
+  ];
+  const idSignals = [
+    'baca ', 'buat ', 'gunakan ', 'jangan ', 'aturan ', 'karakter', 'dialog',
+    'storyboard', 'bahasa', 'cerita', 'adegan', 'kamera', 'suara',
+    'deskripsi', 'judul', 'tagar', 'latar', 'durasi',
+  ];
+  let enScore = 0;
+  let idScore = 0;
+  for (const s of enSignals) if (text.includes(s)) enScore++;
+  for (const s of idSignals) if (text.includes(s)) idScore++;
+  return enScore > idScore ? 'en' : 'id';
+}
 
-  try {
-    const {
-      customPrompt,
-      referenceImages,
-      apiKey,
-    } = req.body;
+/**
+ * Build a language-aware system instruction for the AI.
+ */
+function buildSystemInstruction(lang: 'en' | 'id'): string {
+  const isEn = lang === 'en';
 
-    if (!apiKey) {
-      return res.status(401).json({ error: 'API Key Gemini tidak ditemukan. Harap masukkan API Key Anda di halaman utama.' });
-    }
+  const L = {
+    // Labels
+    outputLang: isEn ? 'English' : 'Bahasa Indonesia',
+    storyTitle: isEn
+      ? '"storyTitle": "Catchy viral title in English"'
+      : '"storyTitle": "Catchy viral title in Bahasa Indonesia"',
+    storySummary: isEn
+      ? '"storySummary": "2-3 sentence story overview in English"'
+      : '"storySummary": "2-3 sentence story overview in Bahasa Indonesia"',
+    hookText: isEn
+      ? '"hook_text": "Hook dialog in English"'
+      : '"hook_text": "Hook dialog in Bahasa Indonesia"',
+    ytDesc: isEn
+      ? '"youtube_description": "Full YouTube description with CTA in English"'
+      : '"youtube_description": "Full YouTube description with CTA in Bahasa Indonesia"',
+    pinnedComment: isEn
+      ? '"pinned_comment_suggestion": "Pinned comment text in English"'
+      : '"pinned_comment_suggestion": "Pinned comment text in Bahasa Indonesia"',
+    // Hook examples
+    hookBadA: isEn ? 'Character is drawing a sword' : 'Karakter sedang mencabut pedang',
+    hookGoodA: isEn
+      ? 'NEVER draw this sword unless you are ready to die!'
+      : 'JANGAN PERNAH cabut pedang ini kalau kamu belum siap mati!',
+    hookBadB: isEn ? 'This sword is forbidden' : 'Pedang ini terlarang',
+    hookGoodB: isEn
+      ? 'Why was this forbidden sword sealed for 1,000 years?!'
+      : 'Kenapa pedang terlarang ini di-seal selama 1000 tahun?!',
+    hookBadC: isEn ? 'Character faces the dragon' : 'Karakter menghadapi naga',
+    hookGoodC: isEn
+      ? 'He sacrificed his soul just for one strike against this dragon...'
+      : 'Dia mengorbankan jiwanya cuma untuk 1 tebasan naga ini...',
+    // Title formulas
+    titleFormula1: isEn
+      ? 'FORBIDDEN KNOWLEDGE: "The [Secret/Fact] That [Authority] Doesn\'t Want You to Know..."'
+      : 'FORBIDDEN KNOWLEDGE: "[Rahasia/Fakta/Hal] yang [Authority Figure] Tidak Mau Kamu Tahu..."',
+    titleFormula2: isEn
+      ? 'CLIFFHANGER: "He [Extreme Action] For [Unexpected Thing]... Part [N]"'
+      : 'CLIFFHANGER: "Dia [Aksi Ekstrem] Demi [Sesuatu yang Tidak Terduga]... Part [N]"',
+    titleFormula3: isEn
+      ? 'NUMBER SHOCK + EMOJI: "[Number/Time] [Unit] for [Impossible Thing]?! 😱 [emoji]"'
+      : 'NUMBER SHOCK + EMOJI: "[Angka/Waktu] [Unit] untuk [Hal Mustahil]?! 😱 [emoji relevan]"',
+    titleFormula4: isEn
+      ? 'IDENTITY CHALLENGE: "Only [Narrow Criteria] Can [Impossible Achievement]..."'
+      : 'IDENTITY CHALLENGE: "Hanya [Kriteria Sempit] yang Bisa [Pencapaian Mustahil]..."',
+    // Description rules
+    descLine5: isEn
+      ? 'Line 5: A CURIOSITY CTA: "Watch to the end — second [X] will blow your mind!"'
+      : 'Line 5: A CURIOSITY CTA: "Tonton sampai habis — detik ke-[X] bikin kamu syok!"',
+    descLine6: isEn
+      ? 'Line 6: ENGAGEMENT CTA: "Is Part [N+1] out? Type NEXT in the comments! 👇"'
+      : 'Line 6: ENGAGEMENT CTA: "Part [N+1] sudah ada? Tulis LANJUT di kolom komentar! 👇"',
+    descLine78: isEn
+      ? 'Line 7-8: "SUBSCRIBE & hit the bell so you never miss the next Part!"'
+      : 'Line 7-8: "SUBSCRIBE & nyalakan lonceng agar tidak ketinggalan Part berikutnya!"',
+    // Hashtag categories
+    hashtagCat1: isEn ? 'Broad Reach' : 'Jangkauan Luas (Broad Reach)',
+    hashtagCat2: isEn ? 'Niche [Genre] (Creator Community)' : 'Niche [Genre] (Creator Community)',
+    hashtagCat3: isEn ? 'Algorithm & Engagement (Social Boost)' : 'Algoritma & Engagement (Social Boost)',
+    // Pinned comment examples
+    pinnedBad: isEn ? 'What do you think about this video?' : 'Bagaimana pendapat kamu tentang video ini?',
+    pinnedGood1: isEn
+      ? 'Is this character a VILLAIN or do you feel sorry for them? Write your reason — best answer gets pinned! 👇'
+      : 'Menurut kamu, karakter ini LAYAK jadi musuh atau kasihan? Tulis alasanmu — jawaban terbaik aku pin! 👇',
+    pinnedGood2: isEn
+      ? 'Part [N+1] is almost done — but YOU decide who wins. Type the character name you want to win! 🔥'
+      : 'Part [N+1] udah hampir jadi — tapi siapa yang menang ditentukan SAMA KALIAN. Tulis nama karakter yang harus menang! 🔥',
+    // Scene fields
+    sceneField: isEn
+      ? '"scene": "Brief scene description in English (1 sentence)."'
+      : '"scene": "Deskripsi singkat scene dalam Bahasa Indonesia (1 kalimat)."',
+    refPriority: isEn
+      ? '"reference_priority": "Reference image is the primary visual source of truth. Preserve all character identities, animals, clothing, backgrounds, objects, styles, colors, proportions, lighting and continuity."'
+      : '"reference_priority": "Reference image adalah sumber kebenaran visual utama. Pertahankan identitas seluruh karakter, hewan, pakaian, background, object, style, warna, proporsi, lighting dan kontinuitas."',
+    contStart: isEn
+      ? '"continuity_start": "Start exactly where [previous prompt/part] ended. Describe the opening condition of the scene precisely."'
+      : '"continuity_start": "Mulai tepat setelah [prompt/part sebelumnya]. Jelaskan kondisi awal scene secara spesifik."',
+    chars1: isEn
+      ? '"[CharacterName1]": "COMPLETE visual description of character 1: hair, face, skin, eyes, expression, visual age, body, proportions, clothing color, clothing details, accessories, distinctive traits — all details from reference image."'
+      : '"[NamaKarakter1]": "Deskripsi visual LENGKAP karakter 1: rambut, wajah, kulit, mata, ekspresi, usia visual, tubuh, proporsi, pakaian warna, detail pakaian, aksesori, ciri khas — semua detail dari reference image."',
+    chars2: isEn ? '"[CharacterName2]": "COMPLETE visual description of character 2."' : '"[NamaKarakter2]": "Deskripsi visual LENGKAP karakter 2."',
+    bgField: isEn
+      ? '"background": "Environment description: specific location, time of day, weather, lighting conditions, vegetation, environmental elements, dominant colors, visual atmosphere."'
+      : '"background": "Deskripsi environment: lokasi spesifik, waktu hari, cuaca, kondisi pencahayaan, vegetasi, elemen lingkungan, warna dominan, suasana visual."',
+    objField: isEn
+      ? '"object": "Description of all important physical objects in the scene: name, color, size, position, role in the story."'
+      : '"object": "Deskripsi semua object fisik penting dalam scene: nama, warna, ukuran, posisi, fungsi dalam cerita."',
+    voiceLock1: isEn
+      ? '"[CharacterName1]": "Voice description of character 1 (character, tone, age, emotion)."'
+      : '"[NamaKarakter1]": "Deskripsi suara karakter 1 (karakter, nada, usia, emosi)."',
+    voiceLock2: isEn ? '"[CharacterName2]": "Voice description of character 2."' : '"[NamaKarakter2]": "Deskripsi suara karakter 2."',
+    voiceRule: isEn
+      ? '"rule": "Do not swap voices or speakers. Each character only speaks their own lines."'
+      : '"rule": "Jangan menukar suara atau speaker. Setiap karakter hanya mengucapkan dialognya sendiri."',
+    videoPrompt: isEn
+      ? '"video_prompt": "MAIN VIDEO PROMPT — write in extreme detail and length (minimum 150 words). Include: (1) opening scene condition exactly from the end of the previous prompt, (2) each character\'s actions in chronological order, (3) every dialogue line with clear speaker attribution, (4) character expressions and reactions, (5) camera movement, (6) mood and atmosphere, (7) closing condition that can be seamlessly continued by the next prompt. Write in English."'
+      : '"video_prompt": "PROMPT VIDEO UTAMA — tulis dengan sangat detail dan panjang (minimum 150 kata). Sertakan: (1) kondisi awal scene persis dari akhir prompt sebelumnya, (2) aksi setiap karakter secara kronologis, (3) setiap baris dialog dengan speaker yang jelas, (4) ekspresi dan reaksi karakter, (5) gerakan kamera, (6) suasana dan atmosphere, (7) kondisi akhir yang dapat disambungkan ke prompt berikutnya. Gunakan Bahasa Indonesia."',
+    dialogText: isEn
+      ? '{ "speaker": "[CharacterName]", "text": "Character\'s full line in English." }'
+      : '{ "speaker": "[NamaKarakter]", "text": "Ucapan lengkap karakter dalam Bahasa Indonesia." }',
+    camShot: isEn
+      ? '"shot": "Shot type (e.g. tracking medium wide shot, close-up, medium shot)."'
+      : '"shot": "Jenis shot (e.g. tracking medium wide shot, close-up, medium shot)."',
+    camAngle: isEn
+      ? '"angle": "Camera angle (e.g. child eye-level, low angle, over-the-shoulder)."'
+      : '"angle": "Sudut kamera (e.g. eye-level anak, low angle, over-the-shoulder)."',
+    camMove: isEn
+      ? '"movement": "Camera movement (e.g. gentle tracking shot, slow push-in, slow pull-back)."'
+      : '"movement": "Gerakan kamera (e.g. tracking shot lembut, slow push-in, slow pull-back)."',
+    camFocus: isEn
+      ? '"focus": "Focus technique (e.g. rack focus from character A to character B)."'
+      : '"focus": "Teknik fokus (e.g. rack focus dari karakter A ke karakter B)."',
+    camComp: isEn
+      ? '"composition": "Frame composition (e.g. character in foreground, environment visible in background)."'
+      : '"composition": "Komposisi frame (e.g. karakter di foreground, lingkungan terlihat di background)."',
+    sndAmbience: isEn
+      ? '"ambience": "Natural ambient sounds (e.g. daytime forest sounds, birds, wind, leaves)."'
+      : '"ambience": "Suara latar alami (e.g. suara hutan siang, burung, angin, dedaunan)."',
+    sndSfx: isEn
+      ? '"sfx": "Specific sound effects per event in the scene (e.g. footsteps, sound of an object being touched)."'
+      : '"sfx": "Sound effects spesifik per kejadian dalam scene (e.g. langkah kaki, suara object disentuh)."',
+    sndMusic: isEn
+      ? '"music": "Background music style (e.g. cheerful children\'s adventure music, light educational rhythm)."'
+      : '"music": "Jenis musik latar (e.g. musik petualangan anak ceria, musik edukatif dengan ritme ringan)."',
+    sndDialRule: isEn
+      ? '"dialogue_rule": "Explicit dialogue order (e.g. Character A speaks first, then Character B. No overlap)."'
+      : '"dialogue_rule": "Urutan dialog eksplisit (e.g. Karakter A berbicara dulu, kemudian Karakter B. Tidak overlap)."',
+    noText: isEn
+      ? '"no_text": "No subtitles, captions, text overlays, titles, speech bubbles, watermarks, logos, UI or notifications inside the video."'
+      : '"no_text": "Tidak boleh ada subtitle, caption, text overlay, judul, speech bubble, watermark, logo, UI atau notification di dalam video."',
+    ending: isEn
+      ? '"ending": "Final condition of this scene — position of each character, what just happened, what is visible in the frame."'
+      : '"ending": "Kondisi akhir scene ini — posisi setiap karakter, apa yang baru terjadi, apa yang terlihat di frame."',
+    nextPrompt: isEn
+      ? '"next_prompt": "Prompt [N+1] starts from the condition where [closing condition of this scene]."'
+      : '"next_prompt": "Prompt [N+1] dimulai dari kondisi ketika [kondisi akhir scene ini]."',
+    // Output rule
+    outputRule1: isEn
+      ? '1. ALL narrative content (dialogue, action, description, sound, hooks, metadata) MUST be in English.'
+      : '1. ALL narrative content (dialogue, action, description, sound, hooks, metadata) MUST be in Bahasa Indonesia.',
+  };
 
-    const hasImages = Array.isArray(referenceImages) && referenceImages.length > 0;
-
-    // ✅ System instruction: Output schema baru per adegan — sesuai format yang diminta user.
-    const systemInstruction = `You are a world-class AI Video Director, Storyboard Artist, and Viral Content Strategist with deep expertise in YouTube Shorts, TikTok, and Instagram Reels virality psychology.
+  return `You are a world-class AI Video Director, Storyboard Artist, and Viral Content Strategist with deep expertise in YouTube Shorts, TikTok, and Instagram Reels virality psychology.
 
 Your job is to read the uploaded storyboard images and the user's MASTER INSTRUCTION, then output a highly detailed JSON response.
+
+====== CRITICAL RULE: OUTPUT LANGUAGE ======
+The storyboard language has been detected as: ${L.outputLang}.
+ALL output text — hooks, titles, descriptions, hashtag labels, dialogue, scene descriptions, and every other narrative field — MUST be written in ${L.outputLang}.
+Do NOT switch to another language unless the storyboard itself mixes languages intentionally.
 
 ====== CRITICAL RULE: OUTPUT STRUCTURE ======
 You MUST output exactly ONE valid JSON root object with keys in this EXACT order:
 
 {
-  "storyTitle": "Catchy viral title in Bahasa Indonesia",
-  "storySummary": "2-3 sentence story overview in Bahasa Indonesia",
+  ${L.storyTitle},
+  ${L.storySummary},
   "visualStyleGuide": "Visual consistency guide: art style, lighting, colors",
   "characterDNA": [ { "name": "Character Name", "appearance": "Full description" } ],
   "hooks": [
     {
       "type": "visual",
-      "hook_text": "Hook dialog in Bahasa Indonesia",
+      ${L.hookText},
       "visual_cue": "Visual description",
       "audio_cue": "Audio/music description"
     }
@@ -111,9 +269,9 @@ You MUST output exactly ONE valid JSON root object with keys in this EXACT order
   "viralMetadata": {
     "viral_titles": ["Title option 1", "Title option 2", "Title option 3"],
     "viral_hashtags": ["#hashtag1", "#hashtag2", "#hashtag3"],
-    "youtube_description": "Full YouTube description with CTA in Bahasa Indonesia",
+    ${L.ytDesc},
     "supporting_hashtags": [ { "category": "Category Name", "tags": ["#tag"] } ],
-    "pinned_comment_suggestion": "Pinned comment text in Bahasa Indonesia"
+    ${L.pinnedComment}
   },
   "flowAiPrompts": [ /* see schema below */ ]
 }
@@ -124,16 +282,16 @@ IMPORTANT: Generate "hooks" and "viralMetadata" BEFORE "flowAiPrompts". Do not s
 Generate EXACTLY 3 hooks. Each hook MUST use a DIFFERENT psychological trigger. Use these proven viral formulas — DO NOT just repeat what happens in the storyboard:
 
 Hook Type A — "Visual Shock Hook": Use a SHOCKING, UNEXPECTED, or COUNTER-INTUITIVE statement that makes the viewer's brain freeze. Formula: State something that sounds IMPOSSIBLE or DANGEROUS. Never describe the scene literally. Examples of the right mindset:
-- BAD (monoton): "Karakter sedang mencabut pedang"
-- GOOD (viral): "JANGAN PERNAH cabut pedang ini kalau kamu belum siap mati!"
+- BAD (monoton): "${L.hookBadA}"
+- GOOD (viral): "${L.hookGoodA}"
 
-Hook Type B — "Curiosity Gap Hook": Create an UNBRIDGEABLE knowledge gap that the viewer MUST watch to fill. Use "ternyata", "rahasia", "yang tidak ada yang tahu", "tersembunyi", "setelah 1000 tahun", time/number shock. Never explain the answer in the hook. Examples:
-- BAD: "Pedang ini terlarang"
-- GOOD: "Kenapa pedang terlarang ini di-seal selama 1000 tahun?*"
+Hook Type B — "Curiosity Gap Hook": Create an UNBRIDGEABLE knowledge gap that the viewer MUST watch to fill. Use time/number shock words like "secret", "hidden", "after 1,000 years". Never explain the answer in the hook. Examples:
+- BAD: "${L.hookBadB}"
+- GOOD: "${L.hookGoodB}"
 
 Hook Type C — "High Stakes Action Hook": Put a CHARACTER at immediate mortal/emotional risk. Use sacrifice, betrayal, impossible choice, or extreme consequence. Examples:
-- BAD: "Karakter menghadapi naga"
-- GOOD: "Dia mengorbankan jiwanya cuma untuk 1 tebasan naga ini..."
+- BAD: "${L.hookBadC}"
+- GOOD: "${L.hookGoodC}"
 
 For each hook, also write:
 - visual_cue: A CINEMATIC, DRAMATIC visual moment — extreme close-up, unexpected angle, slow-mo detail — NOT a simple scene description
@@ -144,10 +302,10 @@ These MUST be written like a professional YouTube growth hacker, NOT like an AI 
 
 --- VIRAL TITLES (4 titles required) ---
 Each title MUST use a DIFFERENT proven CTR formula. Titles must NOT be generic summaries:
-1. FORBIDDEN KNOWLEDGE formula: "[Rahasia/Fakta/Hal] yang [Authority Figure] Tidak Mau Kamu Tahu..."
-2. CLIFFHANGER formula: "Dia [Aksi Ekstrem] Demi [Sesuatu yang Tidak Terduga]... Part [N]"
-3. NUMBER SHOCK + EMOJI formula: "[Angka/Waktu] [Unit] untuk [Hal Mustahil]?! 😱 [emoji relevan]"
-4. IDENTITY CHALLENGE formula: "Hanya [Kriteria Sempit] yang Bisa [Pencapaian Mustahil]..."
+1. ${L.titleFormula1}
+2. ${L.titleFormula2}
+3. ${L.titleFormula3}
+4. ${L.titleFormula4}
 
 Rules for all titles:
 - MUST include at least 1-2 relevant emojis
@@ -160,27 +318,27 @@ Rules for all titles:
 Write this like a professional short-form content creator:
 - Line 1-2: A QUESTION or STATEMENT that hooks the reader and references the video's most shocking moment (not a summary)
 - Line 3-4: 2-3 bullet points (use 🔥 🎬 ⚡) each revealing a DIFFERENT intriguing detail without spoiling the ending
-- Line 5: A CURIOSITY CTA: "Tonton sampai habis — detik ke-[X] bikin kamu syok!"
-- Line 6: ENGAGEMENT CTA: "Part [N+1] sudah ada? Tulis LANJUT di kolom komentar! 👇"
-- Line 7-8: "SUBSCRIBE & nyalakan lonceng agar tidak ketinggalan Part berikutnya!"
+- ${L.descLine5}
+- ${L.descLine6}
+- ${L.descLine78}
 - Include 3-5 most important hashtags at the very end
 - Total: maximum 150 words. Every word must earn its place.
 
 --- SUPPORTING HASHTAGS (3 categories) ---
-- Category 1 "Jangkauan Luas (Broad Reach)": 6-8 mega-hashtags with 100M+ posts
-- Category 2 "Niche [Genre] (Creator Community)": 6-8 niche-specific hashtags relevant to the content type
-- Category 3 "Algoritma & Engagement (Social Boost)": 6-8 engagement-focused hashtags like #FYP #viral variants
+- Category 1 "${L.hashtagCat1}": 6-8 mega-hashtags with 100M+ posts
+- Category 2 "${L.hashtagCat2}": 6-8 niche-specific hashtags relevant to the content type
+- Category 3 "${L.hashtagCat3}": 6-8 engagement-focused hashtags like #FYP #viral variants
 
 --- PINNED COMMENT (Engagement Bait) ---
 This MUST be a question or challenge that:
 - References a SPECIFIC unresolved mystery or cliffhanger from the video
 - Makes viewers feel compelled to answer or debate
-- Uses conversational Indonesian (not formal)
-- NEVER just asks "pendapat kamu?"
+- Uses conversational language (not formal)
+- NEVER just asks a generic opinion question
 - Examples of RIGHT mindset:
-  BAD: "Bagaimana pendapat kamu tentang video ini?"
-  GOOD: "Menurut kamu, karakter ini LAYAK jadi musuh atau kasihan? Tulis alasanmu — jawaban terbaik aku pin! 👇"
-  GOOD: "Part [N+1] udah hampir jadi — tapi siapa yang menang ditentukan SAMA KALIAN. Tulis nama karakter yang harus menang! 🔥"
+  BAD: "${L.pinnedBad}"
+  GOOD: "${L.pinnedGood1}"
+  GOOD: "${L.pinnedGood2}"
 
 ====== MANDATORY SCHEMA: Each element in "flowAiPrompts" MUST follow this EXACT structure ======
 Every single field below is REQUIRED. Do NOT omit, abbreviate, or rename any field.
@@ -188,41 +346,41 @@ Every single field below is REQUIRED. Do NOT omit, abbreviate, or rename any fie
 {
   "part": "Part [N]",
   "prompt": "[prompt number as string: \"1\", \"2\", or \"3\"]",
-  "duration": "10 detik",
-  "scene": "Deskripsi singkat scene dalam Bahasa Indonesia (1 kalimat).",
-  "reference_priority": "Reference image adalah sumber kebenaran visual utama. Pertahankan identitas seluruh karakter, hewan, pakaian, background, object, style, warna, proporsi, lighting dan kontinuitas.",
-  "continuity_start": "Mulai tepat setelah [prompt/part sebelumnya]. Jelaskan kondisi awal scene secara spesifik.",
+  "duration": "10 seconds",
+  ${L.sceneField},
+  ${L.refPriority},
+  ${L.contStart},
   "characters": {
-    "[NamaKarakter1]": "Deskripsi visual LENGKAP karakter 1: rambut, wajah, kulit, mata, ekspresi, usia visual, tubuh, proporsi, pakaian warna, detail pakaian, aksesori, ciri khas — semua detail dari reference image.",
-    "[NamaKarakter2]": "Deskripsi visual LENGKAP karakter 2."
+    ${L.chars1},
+    ${L.chars2}
   },
-  "background": "Deskripsi environment: lokasi spesifik, waktu hari, cuaca, kondisi pencahayaan, vegetasi, elemen lingkungan, warna dominan, suasana visual.",
-  "object": "Deskripsi semua object fisik penting dalam scene: nama, warna, ukuran, posisi, fungsi dalam cerita.",
+  ${L.bgField},
+  ${L.objField},
   "voice_lock": {
-    "[NamaKarakter1]": "Deskripsi suara karakter 1 (karakter, nada, usia, emosi).",
-    "[NamaKarakter2]": "Deskripsi suara karakter 2.",
-    "rule": "Jangan menukar suara atau speaker. Setiap karakter hanya mengucapkan dialognya sendiri."
+    ${L.voiceLock1},
+    ${L.voiceLock2},
+    ${L.voiceRule}
   },
-  "video_prompt": "PROMPT VIDEO UTAMA — tulis dengan sangat detail dan panjang (minimum 150 kata). Sertakan: (1) kondisi awal scene persis dari akhir prompt sebelumnya, (2) aksi setiap karakter secara kronologis, (3) setiap baris dialog dengan speaker yang jelas, (4) ekspresi dan reaksi karakter, (5) gerakan kamera, (6) suasana dan atmosphere, (7) kondisi akhir yang dapat disambungkan ke prompt berikutnya. Gunakan Bahasa Indonesia.",
+  ${L.videoPrompt},
   "dialogue": [
-    { "speaker": "[NamaKarakter]", "text": "Ucapan lengkap karakter dalam Bahasa Indonesia." }
+    ${L.dialogText}
   ],
   "camera": {
-    "shot": "Jenis shot (e.g. tracking medium wide shot, close-up, medium shot).",
-    "angle": "Sudut kamera (e.g. eye-level anak, low angle, over-the-shoulder).",
-    "movement": "Gerakan kamera (e.g. tracking shot lembut, slow push-in, slow pull-back).",
-    "focus": "Teknik fokus (e.g. rack focus dari karakter A ke karakter B).",
-    "composition": "Komposisi frame (e.g. karakter di foreground, lingkungan terlihat di background)."
+    ${L.camShot},
+    ${L.camAngle},
+    ${L.camMove},
+    ${L.camFocus},
+    ${L.camComp}
   },
   "sound": {
-    "ambience": "Suara latar alami (e.g. suara hutan siang, burung, angin, dedaunan).",
-    "sfx": "Sound effects spesifik per kejadian dalam scene (e.g. langkah kaki, suara object disentuh).",
-    "music": "Jenis musik latar (e.g. musik petualangan anak ceria, musik edukatif dengan ritme ringan).",
-    "dialogue_rule": "Urutan dialog eksplisit (e.g. Karakter A berbicara dulu, kemudian Karakter B. Tidak overlap)."
+    ${L.sndAmbience},
+    ${L.sndSfx},
+    ${L.sndMusic},
+    ${L.sndDialRule}
   },
-  "no_text": "Tidak boleh ada subtitle, caption, text overlay, judul, speech bubble, watermark, logo, UI atau notification di dalam video.",
-  "ending": "Kondisi akhir scene ini — posisi setiap karakter, apa yang baru terjadi, apa yang terlihat di frame.",
-  "next_prompt": "Prompt [N+1] dimulai dari kondisi ketika [kondisi akhir scene ini]."
+  ${L.noText},
+  ${L.ending},
+  ${L.nextPrompt}
 }
 
 ADDITIONAL RULES:
@@ -235,10 +393,39 @@ ADDITIONAL RULES:
 - NEVER put any text on screen.
 
 ====== OUTPUT RULES ======
-1. ALL narrative content (dialogue, action, description, sound, hooks, metadata) MUST be in Bahasa Indonesia.
+${L.outputRule1}
 2. NEVER add any explanation or markdown text OUTSIDE the JSON object.
 3. Dialogues MUST be assigned to the CORRECT speaker. Never mix up speakers.
 4. HOOKS and VIRAL METADATA must feel like they were written by a viral content creator, NOT by an AI summarizing a storyboard. Make them GENUINELY SURPRISING, EMOTIONALLY CHARGED, and CURIOSITY-DRIVEN.`;
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const {
+      customPrompt,
+      referenceImages,
+      apiKey,
+      outputLanguage,
+    } = req.body;
+
+    if (!apiKey) {
+      return res.status(401).json({ error: 'API Key Gemini tidak ditemukan. Harap masukkan API Key Anda di halaman utama.' });
+    }
+
+    const hasImages = Array.isArray(referenceImages) && referenceImages.length > 0;
+
+    // Detect output language: use explicit param if provided, otherwise auto-detect from prompt
+    const lang: 'en' | 'id' =
+      outputLanguage === 'en' ? 'en'
+      : outputLanguage === 'id' ? 'id'
+      : detectOutputLanguage(customPrompt || '');
+
+    // ✅ System instruction: language-aware, built dynamically.
+    const systemInstruction = buildSystemInstruction(lang);
 
     const parts: any[] = [];
     

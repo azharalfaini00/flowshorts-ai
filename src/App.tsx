@@ -23,53 +23,258 @@ const LOCAL_STORAGE_KEY = 'flowshorts_ai_saved_projects';
 
 export default function App() {
   // Default user custom prompt
-  const defaultPromptText = `/promptengineer, /masterlockidentity, /mastervoice, /masterbackground, /masterobject, /storycontinuity, /dialoguelock, /languagelock, /nottxt, /nochange,
+  const defaultPromptText = `MASTER PROMPT — GOOGLE FLOW AI PROMPT ENGINEER
 
-buatkan master prompt json [PART], baca seluruh reference image atau storyboard terlebih dahulu sebelum membuat prompt, jadikan reference image sebagai sumber kebenaran visual utama, pertahankan identitas visual seluruh karakter secara konsisten, pertahankan wajah, rambut, warna kulit, warna bulu, bentuk tubuh, proporsi tubuh, usia visual, pakaian, warna pakaian, sepatu, aksesori, ciri khas, dan semua detail visual yang terlihat pada reference image, jangan mengubah karakter, jangan mengganti pakaian, jangan mengganti warna pakaian, jangan mengubah wajah, jangan mengubah bentuk tubuh, jangan mengubah usia visual, jangan mengubah jenis hewan, jangan mengubah warna atau pola hewan, jangan membuat karakter terlihat seperti karakter lain,
+MASTERLOCKIDENTITY • MASTERDIALOGUE • MASTERVVOICE • STORYCONTINUITY
 
-jika terdapat hewan, kunci spesies, warna, pola bulu, bentuk tubuh, ukuran, wajah, mata, telinga, ekor, aksesori, dan seluruh ciri visual hewan, hewan harus tetap menjadi hewan yang sama sepanjang cerita, hewan boleh berdialog jika sesuai dengan cerita atau reference, suara hewan harus memiliki identitas tersendiri, dialog hewan tidak boleh berpindah kepada karakter lain,
+BACA DAN ANALISIS SELURUH REFERENCE IMAGE / STORYBOARD SEBELUM MEMBUAT OUTPUT.
 
-kunci identitas suara setiap karakter, setiap karakter harus memiliki suara yang konsisten dari scene ke scene dan dari part ke part, karakter a hanya mengucapkan dialog karakter a, karakter b hanya mengucapkan dialog karakter b, karakter lain hanya mengucapkan dialog yang diberikan kepadanya, hewan hanya mengucapkan dialog hewan, jangan menukar suara antar karakter, jangan memberikan dialog karakter a kepada karakter b, jangan memberikan dialog karakter b kepada karakter a, jangan membuat karakter yang sedang diam tiba tiba berbicara,
+REFERENCE IMAGE / STORYBOARD ADALAH SATU-SATUNYA SUMBER KEBENARAN UNTUK CERITA, DIALOG, KARAKTER, DAN VISUAL.
 
-gunakan bahasa secara konsisten, jika bahasa yang digunakan adalah bahasa indonesia maka seluruh dialog, voice over, dan ucapan karakter harus menggunakan bahasa indonesia, jangan mencampurkan bahasa inggris atau bahasa asing lainnya, jika bahasa yang digunakan adalah bahasa inggris maka seluruh dialog, voice over, dan ucapan karakter harus menggunakan bahasa inggris, jangan mencampurkan bahasa indonesia atau bahasa asing lainnya, jika bahasa tidak disebutkan dan reference menggunakan bahasa indonesia maka gunakan bahasa indonesia secara konsisten,
+1. PART LOCK
 
-kunci background berdasarkan reference image, pertahankan lokasi, lingkungan, waktu, cuaca, pencahayaan, suasana, warna lingkungan, kondisi tanah, pepohonan, bangunan, jalan, dan objek lingkungan yang terlihat, jangan memindahkan lokasi secara tiba tiba, jangan mengubah waktu secara tiba tiba, jangan mengubah cuaca tanpa alasan cerita, jangan menghilangkan elemen lingkungan penting, jika karakter berpindah lokasi maka perpindahan harus terjadi melalui alur yang masuk akal,
+PART YANG DIMINTA: [ISI PART]
 
-kunci seluruh object penting, pertahankan bentuk, warna, ukuran relatif, fungsi, dan identitas setiap object dari scene sebelumnya ke scene berikutnya, jangan mengganti object dengan object lain yang terlihat mirip, jangan membuat object berpindah secara tiba tiba, jika sebuah karakter sedang memegang atau menggunakan sebuah object maka scene berikutnya harus memperhitungkan keadaan object tersebut,
+- Buat hanya Part yang diminta.
+- Jika tidak ada nomor Part yang ditentukan, gunakan Part 1.
+- Jika storyboard memiliki beberapa Part, lanjutkan dari akhir Part sebelumnya jika informasinya tersedia.
+- Jangan membuat Part tambahan yang tidak diminta.
 
-baca hubungan antara karakter, hewan, object, dan background, pahami siapa berada di mana, siapa melakukan apa, siapa melihat siapa, siapa memegang object apa, kondisi setiap karakter, ekspresi karakter, posisi karakter, arah gerakan, kondisi lingkungan, dan kejadian yang sedang berlangsung, gunakan semua informasi tersebut untuk membuat alur cerita yang jelas,
+2. FORMAT DAN DURASI WAJIB
 
-jika storyboard memiliki part maka ikuti urutan part secara konsisten, part berikutnya wajib melanjutkan keadaan terakhir dari part sebelumnya, jika pengguna meminta part satu maka buat part satu, jika pengguna meminta part dua maka lanjutkan dari part satu, jika pengguna meminta part tiga maka lanjutkan dari part dua, lanjutkan dengan pola yang sama untuk part berikutnya, jika pengguna tidak memberikan part maka buat pembagian part secara otomatis berdasarkan kebutuhan cerita, buat pembagian cerita yang masuk akal, jangan memotong cerita secara acak, setiap part harus memiliki awal, perkembangan, konflik atau tujuan, penyelesaian sementara, dan hubungan yang jelas menuju part berikutnya,
+Setiap Part harus menghasilkan tepat 3 prompt video JSON.
 
-jika gambar tidak mempunyai alur cerita yang jelas, bangun alur berdasarkan informasi visual yang tersedia, prioritaskan karakter yang terlihat, object yang terlihat, lingkungan yang terlihat, ekspresi, posisi, arah gerakan, dan hubungan antar karakter, gunakan kejadian yang paling logis untuk menghubungkan setiap scene, jangan membuat kejadian yang bertentangan dengan reference image, jangan menambahkan twist yang tidak memiliki dasar visual, jangan membuat karakter atau object baru tanpa alasan yang jelas,
+- Prompt 1: 0–10 detik.
+- Prompt 2: 10–20 detik.
+- Prompt 3: 20–30 detik.
+- Total durasi: 30 detik.
+- Jangan membuat Prompt 4.
+- Jangan membuat satu prompt untuk setiap card.
 
-scene berikutnya harus selalu menjadi kelanjutan langsung dari scene sebelumnya, kondisi akhir scene sebelumnya menjadi kondisi awal scene berikutnya, jika karakter sedang berdiri maka jangan tiba tiba duduk tanpa aksi yang menjelaskan perubahan tersebut, jika karakter sedang berjalan maka jangan tiba tiba berada di tempat lain tanpa perpindahan, jika karakter sedang memegang object maka jangan tiba tiba object menghilang, jika karakter sedang berbicara maka speaker harus tetap sesuai dengan karakter yang berbicara, jika hewan sedang berada di samping karakter maka keberadaannya harus tetap diperhitungkan pada scene berikutnya,
+Baca seluruh storyboard, kemudian kelompokkan semua card ke dalam tiga prompt sesuai urutan cerita. Tidak boleh ada card atau informasi cerita yang sengaja dihilangkan.
 
-buat dialog yang masuk akal berdasarkan situasi, dialog harus berhubungan dengan kejadian yang sedang terjadi, dialog harus natural, singkat, mudah dipahami, sesuai emosi karakter, sesuai kepribadian karakter, dan membantu cerita bergerak maju, jangan membuat dialog yang tidak berhubungan dengan visual, jangan membuat karakter berbicara tanpa alasan, jangan membuat dua karakter berbicara secara bersamaan kecuali memang diperlukan oleh cerita, setiap dialog harus memiliki speaker yang jelas,
+3. MASTER DIALOGUE LOCK — PRIORITAS TERTINGGI
 
-jika karakter a berbicara maka hanya suara karakter a yang terdengar, jika karakter b berbicara maka hanya suara karakter b yang terdengar, jika hewan berbicara maka hanya suara hewan yang terdengar, jangan menukar speaker, jangan mencampurkan dialog antar karakter, jangan memberikan dialog karakter kepada karakter lain,
+Sebelum menulis JSON, baca dan catat seluruh teks pada bagian Narasi/Audio setiap card storyboard.
 
-jangan memasukkan tulisan apapun ke dalam video, jangan membuat subtitle, jangan membuat caption, jangan membuat text overlay, jangan membuat judul di dalam video, jangan membuat tulisan pada layar, jangan membuat speech bubble, jangan membuat watermark, jangan membuat logo, jangan membuat ui, jangan membuat notification, semua informasi cerita harus disampaikan melalui visual, ekspresi, gerakan, suara, dialog, ambience, sound effect, dan musik jika diperlukan,
+SEMUA DIALOG YANG DIUCAPKAN HARUS SESUAI PERSIS DENGAN TEKS NARASI/AUDIO PADA STORYBOARD.
 
-buat hook pada awal video menggunakan aksi visual, situasi menarik, ekspresi, konflik, kejadian misterius, kejadian lucu, kejadian emosional, atau rasa penasaran, hook tidak boleh menggunakan tulisan apapun di dalam video,
+Aturan wajib:
 
-gunakan camera shot, camera angle, framing, camera movement, focus, dan komposisi yang mendukung cerita, kamera harus menjaga kontinuitas posisi karakter dan object, jangan membuat perpindahan kamera menyebabkan karakter atau object berubah secara tidak masuk akal,
+1. Salin dialog secara lengkap, kata demi kata.
+2. Pertahankan urutan kalimat, kata, dan tanda baca sebisa mungkin.
+3. Jangan meringkas, menerjemahkan, memparafrase, memperbaiki, atau mengganti kata dalam dialog.
+4. Jangan menambahkan kalimat pembuka, penjelasan, reaksi verbal, pertanyaan, jawaban, atau penutup yang tidak ada di storyboard.
+5. Jangan menghilangkan kalimat meskipun dialog panjang.
+6. Jangan mengulang dialog untuk mengisi durasi.
+7. Jangan membuat dialog baru berdasarkan interpretasi visual.
+8. Jangan mengubah dialog dari satu card menjadi dialog card lain.
+9. Jangan memindahkan dialog ke karakter lain.
+10. Jika storyboard tidak memberikan dialog untuk karakter tertentu, karakter tersebut tidak boleh berbicara.
+11. Jika satu prompt memuat beberapa card, masukkan seluruh dialog card tersebut dalam urutan aslinya.
+12. Jika terdapat teks dialog langsung dan narasi/audio penjelasan, pertahankan jenis dan urutannya sesuai storyboard.
 
-buat audio yang sesuai dengan visual, gunakan dialog jika memang diperlukan, gunakan voice over jika memang diperlukan, gunakan ambience, sound effect, dan musik jika diperlukan, audio harus mengikuti kejadian visual dan tidak boleh bertentangan dengan cerita,
+Larangan khusus terhadap perubahan narasi
 
-buat transisi antar scene secara alami, akhir sebuah prompt harus menyediakan kondisi yang dapat langsung dilanjutkan oleh prompt berikutnya, prompt berikutnya harus dimulai dari kondisi terakhir prompt sebelumnya, jangan membuat lompatan cerita tanpa penjelasan,
+Google Flow tidak boleh menciptakan narasi alternatif berdasarkan pemahamannya sendiri.
 
-untuk setiap part buat tiga prompt video, setiap prompt berdurasi sepuluh detik, total durasi part adalah tiga puluh detik, prompt pertama berlangsung dari awal sampai sepuluh detik, prompt kedua melanjutkan langsung dari prompt pertama, prompt ketiga melanjutkan langsung dari prompt kedua, jangan mengubah karakter, pakaian, hewan, object, background, voice, atau style di antara ketiga prompt,
+Jangan menggunakan instruksi seperti “jelaskan mengapa”, “ceritakan tentang”, atau “tambahkan penjelasan” jika dapat membuat AI menghasilkan kalimat baru.
 
-buat output dalam format json, sertakan informasi project, part, bahasa, total durasi, visual identity lock, character lock, animal lock, clothing lock, background lock, object lock, voice lock, story continuity, prompt video, dialogue, camera, sound, transition, next part hook, youtube hook, youtube title, youtube description, dan youtube hashtags,
+Gunakan instruksi tegas:
 
-jika tidak terdapat dialog pada reference image maka jangan memaksakan dialog, jika dialog diperlukan untuk membuat cerita lebih jelas maka buat dialog yang sederhana dan sesuai dengan aksi visual, jika hewan perlu berbicara dan konteks cerita mendukung maka hewan dapat diberikan dialog, tetapi tetap pertahankan identitas visual hewan,
+PLAY ONLY THE EXACT PROVIDED STORYBOARD DIALOGUE. DO NOT GENERATE, IMPROVISE, REWRITE, SUMMARIZE, OR ADD ANY SPOKEN WORDS.
 
-sebelum menghasilkan hasil akhir lakukan pemeriksaan kontinuitas secara internal, pastikan karakter tetap sama, pastikan pakaian tetap sama, pastikan hewan tetap sama, pastikan background tetap konsisten, pastikan object tetap konsisten, pastikan voice tidak tertukar, pastikan dialog tidak tertukar, pastikan bahasa konsisten, pastikan tidak ada bahasa campuran, pastikan scene berikutnya melanjutkan scene sebelumnya, pastikan part berikutnya dapat melanjutkan part sebelumnya, pastikan tidak ada teleportasi, pastikan tidak ada perubahan karakter secara tiba tiba, pastikan tidak ada perubahan pakaian secara tiba tiba, pastikan tidak ada perubahan hewan secara tiba tiba, pastikan tidak ada perubahan object secara tiba tiba, pastikan tidak ada karakter tambahan tanpa alasan, pastikan tidak ada tulisan apapun di dalam video, pastikan hook tidak menggunakan tulisan, pastikan setiap prompt berdurasi sepuluh detik, pastikan total durasi part tiga puluh detik, pastikan ending setiap prompt dapat disambungkan dengan prompt berikutnya,
+Instruksi ini hanya mengatur ucapan. Deskripsi visual, kamera, dan gerakan tetap boleh dijelaskan untuk membantu menghasilkan video yang sesuai storyboard.
 
-jika terdapat konflik antara kreativitas dan reference image prioritaskan reference image, jika terdapat konflik antara cerita dan identitas karakter prioritaskan identitas karakter, jika terdapat konflik antara dialog dan speaker prioritaskan speaker lock, jika terdapat konflik antar scene prioritaskan story continuity, jika terdapat informasi yang tidak jelas gunakan interpretasi yang paling sederhana, logis, konsisten, dan tidak mengubah identitas visual,
+4. MASTER VOICE LOCK — TANPA NARATOR
 
-hasil akhir harus langsung mengikuti part yang diminta dan harus menghasilkan prompt video yang jelas, tidak ambigu, konsisten, memiliki alur cerita yang masuk akal, memiliki dialog yang masuk akal, memiliki voice yang tidak tertukar, memiliki bahasa yang konsisten, mempertahankan karakter dan object dari reference image, tidak mengubah background secara ngawur, tidak membuat tulisan apapun di dalam video, dan dapat dilanjutkan ke part berikutnya tanpa kehilangan kesinambungan cerita,`;
+TIDAK BOLEH ADA SUARA NARATOR ATAU VOICE-OVER NARATOR.
+
+- Semua dialog harus berasal dari karakter yang ditetapkan oleh storyboard.
+- Jangan menggunakan suara orang ketiga yang menjelaskan cerita.
+- Jangan mengubah teks Narasi/Audio storyboard menjadi narasi di luar karakter.
+- Jika teks storyboard merupakan dialog karakter, karakter tersebut yang mengucapkannya.
+- Jika storyboard tidak menetapkan siapa yang berbicara, jangan mengarang identitas pembicara atau membuat dialog tambahan.
+- Jangan menambahkan suara manusia di luar dialog yang disediakan.
+- Jangan membuat karakter lain berbicara di luar giliran dialognya.
+
+Pertahankan identitas suara karakter secara konsisten pada ketiga prompt, termasuk karakteristik suara, usia suara, intonasi, aksen, dan kecepatan bicara yang sesuai dengan karakter.
+
+Jika storyboard tidak memberikan dialog untuk karakter hewan, hewan tidak boleh berbicara menggunakan bahasa manusia.
+
+Suara ambience dan efek suara nonverbal boleh digunakan jika sesuai dengan adegan. Musik latar bersifat opsional, lembut, dan tidak boleh menutupi dialog.
+
+5. DIALOGUE TIMING LOCK
+
+Jangan memotong atau mengubah dialog agar sesuai dengan durasi video.
+
+- Atur waktu pengucapan dan gerakan karakter secara realistis.
+- Gunakan jeda seperlunya tanpa menghilangkan kata.
+- Jangan mempercepat suara secara ekstrem.
+- Jangan menumpuk beberapa suara hingga tidak jelas.
+- Jangan mengubah teks demi mengejar durasi.
+- Jangan membuat prompt tambahan.
+
+Jika durasi dialog lebih panjang daripada 10 detik, tetap pertahankan teks lengkap dan atur tempo sebaik mungkin. Jangan mengklaim seluruh dialog pasti selesai secara natural jika durasinya memang tidak mencukupi.
+
+6. CHARACTER IDENTITY LOCK
+
+Gunakan reference image sebagai acuan identitas visual utama.
+
+Pertahankan secara konsisten:
+
+- Wajah, mata, hidung, mulut, dan bentuk kepala.
+- Rambut, warna kulit, usia visual, dan ekspresi dasar.
+- Bentuk tubuh dan proporsi karakter.
+- Pakaian, warna pakaian, sepatu, serta aksesori.
+- Gaya animasi, tekstur, warna, dan tingkat detail.
+
+Untuk karakter hewan, pertahankan spesies, pola dan warna bulu, bentuk wajah, mata, telinga, ekor, ukuran tubuh, dan aksesori.
+
+Jangan mengganti desain, membuat karakter baru, atau mengubah identitas karakter di antara prompt.
+
+7. BACKGROUND DAN OBJECT LOCK
+
+Pertahankan lokasi, lingkungan, waktu, cuaca, pencahayaan, warna, suasana, dan objek sesuai storyboard.
+
+Semua objek penting harus mempertahankan bentuk, warna, ukuran relatif, fungsi, serta kondisinya.
+
+Jangan membuat objek tiba-tiba muncul atau menghilang. Jika cerita berpindah tempat, tampilkan transisi yang masuk akal dan sesuai storyboard.
+
+Jangan memasukkan objek tambahan yang mengubah makna cerita.
+
+8. STORY CONTINUITY LOCK
+
+Ketiga prompt merupakan satu rangkaian video yang berkesinambungan.
+
+- Prompt 1 dimulai dari keadaan awal cerita.
+- Prompt 2 dimulai dari keadaan terakhir Prompt 1.
+- Prompt 3 dimulai dari keadaan terakhir Prompt 2.
+
+Pertahankan posisi tubuh, arah pandangan, gerakan yang sedang berlangsung, ekspresi, posisi objek, lokasi, dan pencahayaan.
+
+Dilarang melakukan teleportasi, mengulang adegan dari awal, mengubah posisi tanpa gerakan, atau mengganti lokasi tanpa transisi.
+
+Akhir Prompt 1 harus cocok dengan awal Prompt 2. Akhir Prompt 2 harus cocok dengan awal Prompt 3.
+
+9. LANGUAGE LOCK
+
+Deteksi bahasa utama storyboard sebelum membuat prompt.
+
+- Jika storyboard berbahasa Indonesia, gunakan bahasa Indonesia.
+- Jika storyboard berbahasa Inggris, gunakan bahasa Inggris.
+- Jika menggunakan bahasa lain, ikuti bahasa utama tersebut.
+- Jangan menerjemahkan dialog asli.
+- Jangan mencampurkan bahasa tanpa alasan yang terdapat pada storyboard.
+
+Semua instruksi yang akan diproses Google Flow harus jelas dan konsisten dengan bahasa storyboard. Kunci bahasa berlaku untuk dialog dan seluruh deskripsi prompt.
+
+10. VISUAL DAN CAMERA LOCK
+
+Setiap prompt harus menjelaskan:
+
+- Card storyboard yang digunakan.
+- Aksi dan ekspresi karakter.
+- Lingkungan dan objek penting.
+- Framing, angle, pergerakan kamera, dan fokus.
+- Dialog karakter yang tepat.
+- Efek suara dan ambience jika diperlukan.
+- Kondisi akhir yang akan dilanjutkan prompt berikutnya.
+
+Gunakan gerakan yang wajar dan visual yang mengikuti storyboard. Jangan menambahkan kejadian baru hanya untuk membuat video terlihat lebih menarik.
+
+Prompt 1 boleh menggunakan hook visual yang memang sesuai dengan adegan awal storyboard, tetapi tidak boleh menambahkan dialog atau peristiwa baru.
+
+11. NO TEXT LOCK
+
+Jangan menampilkan tulisan tambahan di dalam video.
+
+Dilarang membuat subtitle, caption, judul, speech bubble, watermark, logo tambahan, UI, notifikasi, atau teks overlay.
+
+Tulisan yang terlihat pada gambar referensi tidak otomatis menjadi bagian video. Utamakan adegan visual dan dialog suara.
+
+12. FORMAT OUTPUT — TEPAT 3 JSON
+
+Output hanya tiga objek JSON, tanpa penjelasan tambahan di luar JSON.
+
+PROMPT 1
+
+{
+"prompt": 1,
+"part": "Part 1",
+"duration": "0-10 detik",
+"cards": [],
+"visual": "",
+"action": "",
+"dialogue": [
+{
+"speaker": "Nama karakter sesuai storyboard",
+"text": "Salin dialog asli secara lengkap",
+"voice": "Suara karakter yang konsisten",
+"delivery": "Intonasi dan emosi yang sesuai adegan"
+}
+],
+"camera": "",
+"sound": "Hanya efek suara nonverbal dan ambience yang sesuai; tanpa narator",
+"transition": ""
+}
+
+PROMPT 2
+
+{
+"prompt": 2,
+"part": "Part 1",
+"duration": "10-20 detik",
+"cards": [],
+"visual": "",
+"action": "",
+"dialogue": [],
+"camera": "",
+"sound": "Hanya efek suara nonverbal dan ambience yang sesuai; tanpa narator",
+"transition": ""
+}
+
+PROMPT 3
+
+{
+"prompt": 3,
+"part": "Part 1",
+"duration": "20-30 detik",
+"cards": [],
+"visual": "",
+"action": "",
+"dialogue": [],
+"camera": "",
+"sound": "Hanya efek suara nonverbal dan ambience yang sesuai; tanpa narator",
+"transition": ""
+}
+
+Ganti nilai Part sesuai Part yang benar-benar diminta. Isi array dialogue dengan seluruh dialog asli dari card yang dikelompokkan ke prompt tersebut. Jika tidak ada dialog pada suatu card, jangan menciptakan dialog baru.
+
+13. FINAL VALIDATION
+
+Sebelum mengeluarkan hasil, pastikan:
+
+1. Output tepat tiga JSON.
+2. Durasi setiap prompt tepat 10 detik.
+3. Seluruh card sudah terwakili dalam urutan cerita.
+4. Seluruh dialog storyboard disalin lengkap.
+5. Tidak ada kata yang ditambahkan, dihilangkan, atau diganti.
+6. Pembicara sesuai storyboard.
+7. Tidak ada narator atau voice-over narator.
+8. Tidak ada dialog improvisasi.
+9. Tidak ada suara manusia tambahan.
+10. Bahasa sesuai bahasa storyboard.
+11. Karakter, pakaian, hewan, dan aksesori konsisten.
+12. Background dan objek konsisten.
+13. Prompt 2 melanjutkan Prompt 1.
+14. Prompt 3 melanjutkan Prompt 2.
+15. Tidak ada teks tambahan di dalam video.
+16. Tidak ada Prompt 4.
+
+PRIORITAS AKHIR: KESETIAAN PADA STORYBOARD > DIALOG ASLI DAN LENGKAP > IDENTITAS KARAKTER > KONTINUITAS > VISUAL DAN KAMERA.
+
+KELUARKAN HANYA TIGA JSON. JANGAN MENAMBAHKAN NARATOR, DIALOG BARU, ATAU PENJELASAN LISAN YANG TIDAK TERDAPAT DALAM STORYBOARD.`;
 
   // Input states
   const [customPrompt, setCustomPrompt] = useState<string>(defaultPromptText);
@@ -138,9 +343,19 @@ hasil akhir harus langsung mengikuti part yang diminta dan harus menghasilkan pr
     setErrorMessage(null);
 
     try {
+      // Detect output language from custom prompt
+      const detectLang = (text: string): 'en' | 'id' => {
+        const t = (text || '').toLowerCase();
+        const enHits = ['the ', ' is ', ' are ', ' was ', ' were ', ' will ', 'scene', 'character', 'camera', 'background', 'dialogue', 'story', 'visual', 'lock', 'storyboard', 'this ', 'with ', ' and '].filter(s => t.includes(s)).length;
+        const idHits = ['baca ', 'buat ', 'gunakan ', 'jangan ', 'karakter', 'dialog', 'bahasa', 'cerita', 'adegan', 'kamera', 'suara', 'deskripsi', 'judul', 'durasi'].filter(s => t.includes(s)).length;
+        return enHits > idHits ? 'en' : 'id';
+      };
+      const outputLanguage = detectLang(customPrompt);
+
       const payload = {
         customPrompt,
         apiKey: geminiApiKey,
+        outputLanguage,
         referenceImages: referenceImages.map((img) => ({
           mimeType: img.mimeType,
           base64: img.base64,
