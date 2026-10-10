@@ -67,7 +67,7 @@ async function generateWithGeminiFallback(ai: GoogleGenAI, params: any): Promise
   throw lastError;
 }
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 /**
  * Detect the primary output language from the storyboard/custom prompt.
@@ -385,18 +385,21 @@ Every single field below is REQUIRED. Do NOT omit, abbreviate, or rename any fie
 
 ADDITIONAL RULES:
 - The LAST prompt of the LAST part: replace "next_prompt" with "next_part_hook" describing what Part [N+1] will begin with.
-- "video_prompt" MUST be the longest field. Write minimum 150 words for it.
+- "video_prompt" MUST be the longest field. Write minimum 150 words for it. It MUST explicitly reference every dialogue line spoken in that prompt.
 - "characters" MUST include ALL characters appearing in that scene.
-- "dialogue" MUST list ALL spoken lines in chronological order.
+- "dialogue" MUST list EVERY SINGLE spoken line in chronological order — copy verbatim from the storyboard. NEVER omit, shorten, paraphrase, or merge lines. If a card has 10 lines of dialogue, all 10 lines MUST appear in the dialogue array.
 - Each scene prompt MUST start exactly where the previous one ended — no time jumps.
 - NEVER swap speakers. NEVER have a character speak another character's lines.
 - NEVER put any text on screen.
+- NEVER truncate the JSON output. The entire JSON must be complete and valid — no cut-off strings, no missing closing brackets.
+- If the dialogue is very long, still write every word. Do not summarize long speeches.
 
 ====== OUTPUT RULES ======
 ${L.outputRule1}
 2. NEVER add any explanation or markdown text OUTSIDE the JSON object.
 3. Dialogues MUST be assigned to the CORRECT speaker. Never mix up speakers.
-4. HOOKS and VIRAL METADATA must feel like they were written by a viral content creator, NOT by an AI summarizing a storyboard. Make them GENUINELY SURPRISING, EMOTIONALLY CHARGED, and CURIOSITY-DRIVEN.`;
+4. DIALOGUE COMPLETENESS IS MANDATORY: Every spoken line from every storyboard card MUST appear in the "dialogue" array of its corresponding prompt — verbatim, complete, in order. Omitting ANY line is a critical failure.
+5. HOOKS and VIRAL METADATA must feel like they were written by a viral content creator, NOT by an AI summarizing a storyboard. Make them GENUINELY SURPRISING, EMOTIONALLY CHARGED, and CURIOSITY-DRIVEN.`;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -446,13 +449,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const userPromptText = `--- MASTER INSTRUCTION (ABSOLUTE LAW) ---
 ${customPrompt}
 
+--- PRE-GENERATION CHECKLIST (complete BEFORE writing JSON) ---
+STEP 1 — DIALOGUE EXTRACTION (ZERO-TOLERANCE):
+  a. Read EVERY storyboard card image carefully.
+  b. List ALL narration/audio/dialogue text found in each card — word for word.
+  c. Map each line to its speaker (character name as written in the storyboard).
+  d. Do NOT skip, shorten, paraphrase, summarize, or omit any line — even if it is long.
+  e. If a card has no dialogue, that card has silence (no invented lines).
+
+STEP 2 — SCENE GROUPING:
+  a. Group storyboard cards into 3 prompts (Prompt 1 = 0-10s, Prompt 2 = 10-20s, Prompt 3 = 20-30s).
+  b. Every card must belong to exactly one prompt.
+  c. Include ALL dialogue from every card inside the prompt it belongs to.
+
+STEP 3 — JSON GENERATION:
+  a. For EACH prompt, write the full JSON object with every required field.
+  b. The "dialogue" array MUST contain every spoken line from that prompt's cards — complete, verbatim.
+  c. The "video_prompt" field MUST quote or paraphrase every dialogue line explicitly — do not just say "character speaks".
+  d. NEVER truncate or cut off any field mid-sentence.
+  e. NEVER skip a prompt or a card.
+
 --- EXECUTION STEPS ---
 1. ANALYZE the storyboard images above — read ALL text, dialogues, character appearances, and story elements.
 2. READ the MASTER INSTRUCTION above. You MUST follow every single rule, constraint, and formatting requirement listed in it.
-3. GENERATE each requested scene as a FULLY DETAILED JSON object exactly matching the structure, keys, and values requested in the MASTER INSTRUCTION. Do not omit ANY field. Do not summarize.
-4. Place all these scene JSON objects exactly as they are inside the "flowAiPrompts" array.
-5. AUTO-GENERATE the "hooks" and "viralMetadata" fields.
-6. Return the complete single JSON root object.`;
+3. COMPLETE the PRE-GENERATION CHECKLIST above before writing any JSON.
+4. GENERATE each requested scene as a FULLY DETAILED JSON object exactly matching the structure, keys, and values requested in the MASTER INSTRUCTION. Do not omit ANY field. Do not summarize.
+5. Place all these scene JSON objects exactly as they are inside the "flowAiPrompts" array.
+6. AUTO-GENERATE the "hooks" and "viralMetadata" fields.
+7. Return the complete single JSON root object.
+
+⚠️ FINAL REMINDER — DIALOGUE COMPLETENESS:
+Before returning, verify that EVERY spoken line from EVERY storyboard card appears verbatim in the "dialogue" array of the correct prompt. Missing even one line is a critical failure.`;
 
     parts.push({ text: userPromptText });
 
@@ -462,7 +489,10 @@ ${customPrompt}
       config: {
         systemInstruction,
         responseMimeType: 'application/json',
-        temperature: 0.85, // Higher temperature for creative, non-repetitive viral hooks & metadata
+        // Lower temperature = AI faithfully copies storyboard dialogue instead of improvising
+        temperature: 0.65,
+        // Prevent output truncation — storyboards with many cards need large token budget
+        maxOutputTokens: 65536,
       },
     });
 
